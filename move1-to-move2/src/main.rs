@@ -175,6 +175,42 @@ fn try_vector_empty_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit>
     })
 }
 
+/// Try to match vector::borrow(&v, i) → &v[i] or vector::borrow_mut(&mut v, i) → &mut v[i].
+fn try_vector_borrow_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
+    let func_text = get_func_text(node, source)?;
+    let prefix = match func_text {
+        "vector::borrow" => "&",
+        "vector::borrow_mut" => "&mut ",
+        _ => return None,
+    };
+    let args = node.child_by_field_name("arguments")?;
+    if args.named_child_count() != 2 {
+        return None;
+    }
+    let first_arg = args.named_child(0)?;
+    let idx_arg = args.named_child(1)?;
+
+    // Strip borrow from first arg if it's a borrow_expression
+    let obj_text = if first_arg.kind() == "borrow_expression" {
+        first_arg.named_child(0)?.utf8_text(source).ok()?
+    } else {
+        first_arg.utf8_text(source).ok()?
+    };
+
+    let idx_text = idx_arg.utf8_text(source).ok()?;
+
+    Some(Edit {
+        start_byte: node.start_byte(),
+        end_byte: node.end_byte(),
+        replacement: format!("{prefix}{obj_text}[{idx_text}]"),
+        rule: if func_text == "vector::borrow" {
+            "vector_borrow"
+        } else {
+            "vector_borrow_mut"
+        },
+    })
+}
+
 /// Try to strip redundant parentheses around a cast expression: (x as u64) → x as u64.
 fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
     if node.named_child_count() != 1 {
@@ -206,6 +242,7 @@ fn strip_borrow_prefix(s: &str) -> String {
 
 fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) {
     // *borrow_global<T>(addr) → T[addr]  (deref cancels the &)
+    // *vector::borrow(&v, i) → v[i]  (deref cancels the &)
     if node.kind() == "dereference_expression" {
         if let Some(inner) = node.named_child(0) {
             if inner.kind() == "call_expression" {
@@ -218,15 +255,33 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
                     });
                     return;
                 }
+                if let Some(edit) = try_vector_borrow_edit(inner, source) {
+                    edits.push(Edit {
+                        start_byte: node.start_byte(),
+                        end_byte: node.end_byte(),
+                        replacement: strip_borrow_prefix(&edit.replacement),
+                        rule: "deref_vector_borrow",
+                    });
+                    return;
+                }
             }
         }
     }
 
     // &borrow_global<T>(addr) → &T[addr]  (absorb redundant outer &)
+    // &vector::borrow(&v, i) → &v[i]  (absorb redundant outer &)
     if node.kind() == "borrow_expression" {
         if let Some(inner) = node.named_child(0) {
             if inner.kind() == "call_expression" {
                 if let Some(edit) = try_borrow_global_edit(inner, source) {
+                    edits.push(Edit {
+                        start_byte: node.start_byte(),
+                        end_byte: node.end_byte(),
+                        ..edit
+                    });
+                    return;
+                }
+                if let Some(edit) = try_vector_borrow_edit(inner, source) {
                     edits.push(Edit {
                         start_byte: node.start_byte(),
                         end_byte: node.end_byte(),
@@ -239,8 +294,16 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
     }
 
     // borrow_global<T>(addr) → &T[addr]  (or T[addr] when followed by .field)
+    // vector::borrow(&v, i) → &v[i]  (or v[i] when followed by .field)
     if node.kind() == "call_expression" {
         if let Some(mut edit) = try_borrow_global_edit(node, source) {
+            if should_strip_prefix(node) {
+                edit.replacement = strip_borrow_prefix(&edit.replacement);
+            }
+            edits.push(edit);
+            return;
+        }
+        if let Some(mut edit) = try_vector_borrow_edit(node, source) {
             if should_strip_prefix(node) {
                 edit.replacement = strip_borrow_prefix(&edit.replacement);
             }

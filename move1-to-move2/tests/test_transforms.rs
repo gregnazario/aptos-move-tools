@@ -346,3 +346,58 @@ fn test_cast_paren_u8() {
     let expected = "module 0x1::test { fun f() { let x = amount as u8; } }";
     assert_eq!(transform(input), expected);
 }
+
+// ── Vector index syntax transforms ───────────────────────────────────────────
+
+#[test]
+fn test_vector_borrow() {
+    let input = "module 0x1::test { fun f() { vector::borrow(&v, 0); } }";
+    let expected = "module 0x1::test { fun f() { &v[0]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_borrow_mut() {
+    let input = "module 0x1::test { fun f() { vector::borrow_mut(&mut v, i); } }";
+    let expected = "module 0x1::test { fun f() { &mut v[i]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_deref_vector_borrow() {
+    // *vector::borrow(&v, i) → v[i]  (deref cancels the &)
+    let input = "module 0x1::test { fun f() { let x = *vector::borrow(&v, 0); } }";
+    let expected = "module 0x1::test { fun f() { let x = v[0]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_deref_vector_borrow_mut() {
+    // *vector::borrow_mut(&mut v, i) = val → v[i] = val
+    let input = "module 0x1::test { fun f() { *vector::borrow_mut(&mut v, 0) = 42; } }";
+    let expected = "module 0x1::test { fun f() { v[0] = 42; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_borrow_with_field_access() {
+    // vector::borrow(&v, i).field → v[i].field  (no prefix when followed by .field)
+    let input = "module 0x1::test { fun f() { vector::borrow(&items, idx).value; } }";
+    let expected = "module 0x1::test { fun f() { items[idx].value; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_borrow_ref_variable() {
+    // First arg is already a reference variable (not a borrow_expression)
+    let input = "module 0x1::test { fun f() { vector::borrow(v_ref, 0); } }";
+    let expected = "module 0x1::test { fun f() { &v_ref[0]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_borrow_complex_index() {
+    let input = "module 0x1::test { fun f() { vector::borrow(&data, i + 1); } }";
+    let expected = "module 0x1::test { fun f() { &data[i + 1]; } }";
+    assert_eq!(transform(input), expected);
+}
