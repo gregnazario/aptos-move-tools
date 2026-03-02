@@ -308,3 +308,41 @@ fn test_vector_empty_not_empty_args() {
     let input = "module 0x1::test { fun f() { let v = vector::empty<u64>(x); } }";
     assert_eq!(transform(input), input);
 }
+
+// ── Cast paren removal transforms ────────────────────────────────────────────
+
+#[test]
+fn test_cast_paren_in_let() {
+    let input = "module 0x1::test { fun f() { let x = (y as u64); } }";
+    let expected = "module 0x1::test { fun f() { let x = y as u64; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_cast_paren_in_call_arg() {
+    let input = "module 0x1::test { fun f() { foo((x as u128)); } }";
+    let expected = "module 0x1::test { fun f() { foo(x as u128); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_cast_paren_complex_inner() {
+    // Inner expression has its own parens that should stay
+    let input = "module 0x1::test { fun f() { let x = ((a + b) as u64); } }";
+    let expected = "module 0x1::test { fun f() { let x = (a + b) as u64; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_no_cast_paren_removal_non_cast() {
+    // Parenthesized non-cast expression should not be touched
+    let input = "module 0x1::test { fun f() { let x = (a + b); } }";
+    assert_eq!(transform(input), input);
+}
+
+#[test]
+fn test_cast_paren_u8() {
+    let input = "module 0x1::test { fun f() { let x = (amount as u8); } }";
+    let expected = "module 0x1::test { fun f() { let x = amount as u8; } }";
+    assert_eq!(transform(input), expected);
+}

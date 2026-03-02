@@ -175,6 +175,24 @@ fn try_vector_empty_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit>
     })
 }
 
+/// Try to strip redundant parentheses around a cast expression: (x as u64) → x as u64.
+fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
+    if node.named_child_count() != 1 {
+        return None;
+    }
+    let inner = node.named_child(0)?;
+    if inner.kind() != "cast_expression" {
+        return None;
+    }
+    let inner_text = inner.utf8_text(source).ok()?;
+    Some(Edit {
+        start_byte: node.start_byte(),
+        end_byte: node.end_byte(),
+        replacement: inner_text.to_string(),
+        rule: "cast_parens",
+    })
+}
+
 /// Strip the & or &mut prefix from a borrow_global replacement string.
 fn strip_borrow_prefix(s: &str) -> String {
     if s.starts_with("&mut ") {
@@ -234,6 +252,14 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
     // vector::empty<T>() → vector<T>[]
     if node.kind() == "call_expression" {
         if let Some(edit) = try_vector_empty_edit(node, source) {
+            edits.push(edit);
+            return;
+        }
+    }
+
+    // (x as u64) → x as u64  (redundant cast parens)
+    if node.kind() == "parenthesized_expression" {
+        if let Some(edit) = try_cast_paren_edit(node, source) {
             edits.push(edit);
             return;
         }
