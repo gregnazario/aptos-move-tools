@@ -278,3 +278,33 @@ fn test_compound_field_access() {
     let expected = "module 0x1::test { fun f() { counter.value += 1; } }";
     assert_eq!(transform(input), expected);
 }
+
+// ── vector::empty transforms ─────────────────────────────────────────────────
+
+#[test]
+fn test_vector_empty_with_type() {
+    let input = "module 0x1::test { fun f() { let v = vector::empty<u64>(); } }";
+    let expected = "module 0x1::test { fun f() { let v = vector<u64>[]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_empty_nested_type() {
+    let input = "module 0x1::test { fun f() { let v = vector::empty<vector<u8>>(); } }";
+    let expected = "module 0x1::test { fun f() { let v = vector<vector<u8>>[]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_empty_no_type_args() {
+    let input = "module 0x1::test { fun f() { let v = vector::empty(); } }";
+    let expected = "module 0x1::test { fun f() { let v = vector[]; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_vector_empty_not_empty_args() {
+    // vector::empty is not called with args normally, but if it were, don't transform
+    let input = "module 0x1::test { fun f() { let v = vector::empty<u64>(x); } }";
+    assert_eq!(transform(input), input);
+}

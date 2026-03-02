@@ -146,6 +146,35 @@ fn try_compound_assign_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Ed
     })
 }
 
+/// Get the full text of a call_expression's function (e.g., "vector::empty" or "push_back").
+fn get_func_text<'a>(node: tree_sitter::Node, source: &'a [u8]) -> Option<&'a str> {
+    node.child_by_field_name("function")?.utf8_text(source).ok()
+}
+
+/// Try to match vector::empty<T>() → vector<T>[].
+fn try_vector_empty_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
+    let func_text = get_func_text(node, source)?;
+    if func_text != "vector::empty" {
+        return None;
+    }
+    let args = node.child_by_field_name("arguments")?;
+    let args_text = args.utf8_text(source).ok()?;
+    if args_text != "()" {
+        return None; // Not an empty argument list
+    }
+    let type_part = if let Some(ta) = node.child_by_field_name("type_arguments") {
+        ta.utf8_text(source).ok()?
+    } else {
+        ""
+    };
+    Some(Edit {
+        start_byte: node.start_byte(),
+        end_byte: node.end_byte(),
+        replacement: format!("vector{type_part}[]"),
+        rule: "vector_empty",
+    })
+}
+
 /// Strip the & or &mut prefix from a borrow_global replacement string.
 fn strip_borrow_prefix(s: &str) -> String {
     if s.starts_with("&mut ") {
@@ -197,6 +226,14 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
             if should_strip_prefix(node) {
                 edit.replacement = strip_borrow_prefix(&edit.replacement);
             }
+            edits.push(edit);
+            return;
+        }
+    }
+
+    // vector::empty<T>() → vector<T>[]
+    if node.kind() == "call_expression" {
+        if let Some(edit) = try_vector_empty_edit(node, source) {
             edits.push(edit);
             return;
         }
