@@ -401,3 +401,260 @@ fn test_vector_borrow_complex_index() {
     let expected = "module 0x1::test { fun f() { &data[i + 1]; } }";
     assert_eq!(transform(input), expected);
 }
+
+// ── Receiver-style transforms ────────────────────────────────────────────────
+
+// -- vector --
+
+#[test]
+fn test_receiver_vector_push_back() {
+    let input = "module 0x1::test { fun f() { vector::push_back(&mut v, 42); } }";
+    let expected = "module 0x1::test { fun f() { v.push_back(42); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_pop_back() {
+    let input = "module 0x1::test { fun f() { vector::pop_back(&mut v); } }";
+    let expected = "module 0x1::test { fun f() { v.pop_back(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_length() {
+    let input = "module 0x1::test { fun f() { vector::length(&v); } }";
+    let expected = "module 0x1::test { fun f() { v.length(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_is_empty() {
+    let input = "module 0x1::test { fun f() { vector::is_empty(&v); } }";
+    let expected = "module 0x1::test { fun f() { v.is_empty(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_contains() {
+    let input = "module 0x1::test { fun f() { vector::contains(&v, &e); } }";
+    let expected = "module 0x1::test { fun f() { v.contains(&e); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_swap() {
+    let input = "module 0x1::test { fun f() { vector::swap(&mut v, i, j); } }";
+    let expected = "module 0x1::test { fun f() { v.swap(i, j); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_append() {
+    let input = "module 0x1::test { fun f() { vector::append(&mut v1, v2); } }";
+    let expected = "module 0x1::test { fun f() { v1.append(v2); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_reverse() {
+    let input = "module 0x1::test { fun f() { vector::reverse(&mut v); } }";
+    let expected = "module 0x1::test { fun f() { v.reverse(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_remove() {
+    let input = "module 0x1::test { fun f() { vector::remove(&mut v, i); } }";
+    let expected = "module 0x1::test { fun f() { v.remove(i); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_destroy_empty() {
+    let input = "module 0x1::test { fun f() { vector::destroy_empty(v); } }";
+    let expected = "module 0x1::test { fun f() { v.destroy_empty(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_vector_with_type_args() {
+    // Type args need :: prefix in receiver style
+    let input = "module 0x1::test { fun f() { vector::remove<u64>(&mut v, i); } }";
+    let expected = "module 0x1::test { fun f() { v.remove::<u64>(i); } }";
+    assert_eq!(transform(input), expected);
+}
+
+// -- option --
+
+#[test]
+fn test_receiver_option_is_some() {
+    let input = "module 0x1::test { fun f() { option::is_some(&o); } }";
+    let expected = "module 0x1::test { fun f() { o.is_some(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_option_is_none() {
+    let input = "module 0x1::test { fun f() { option::is_none(&opt); } }";
+    let expected = "module 0x1::test { fun f() { opt.is_none(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_option_borrow() {
+    let input = "module 0x1::test { fun f() { option::borrow(&opt); } }";
+    let expected = "module 0x1::test { fun f() { opt.borrow(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_option_extract() {
+    let input = "module 0x1::test { fun f() { option::extract(&mut opt); } }";
+    let expected = "module 0x1::test { fun f() { opt.extract(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_option_destroy_some() {
+    let input = "module 0x1::test { fun f() { option::destroy_some(opt); } }";
+    let expected = "module 0x1::test { fun f() { opt.destroy_some(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_option_contains() {
+    let input = "module 0x1::test { fun f() { option::contains(&opt, &val); } }";
+    let expected = "module 0x1::test { fun f() { opt.contains(&val); } }";
+    assert_eq!(transform(input), expected);
+}
+
+// -- string --
+
+#[test]
+fn test_receiver_string_length() {
+    let input = "module 0x1::test { fun f() { string::length(&s); } }";
+    let expected = "module 0x1::test { fun f() { s.length(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_string_is_empty() {
+    let input = "module 0x1::test { fun f() { string::is_empty(&s); } }";
+    let expected = "module 0x1::test { fun f() { s.is_empty(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_string_append() {
+    let input = "module 0x1::test { fun f() { string::append(&mut s, other); } }";
+    let expected = "module 0x1::test { fun f() { s.append(other); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_string_sub_string() {
+    let input = "module 0x1::test { fun f() { string::sub_string(&s, 0, 5); } }";
+    let expected = "module 0x1::test { fun f() { s.sub_string(0, 5); } }";
+    assert_eq!(transform(input), expected);
+}
+
+// -- signer --
+
+#[test]
+fn test_receiver_signer_address_of() {
+    let input = "module 0x1::test { fun f(account: &signer) { signer::address_of(account); } }";
+    let expected =
+        "module 0x1::test { fun f(account: &signer) { account.address_of(); } }";
+    assert_eq!(transform(input), expected);
+}
+
+// -- table --
+
+#[test]
+fn test_receiver_table_add() {
+    let input = "module 0x1::test { fun f() { table::add(&mut t, key, val); } }";
+    let expected = "module 0x1::test { fun f() { t.add(key, val); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_table_contains() {
+    let input = "module 0x1::test { fun f() { table::contains(&t, key); } }";
+    let expected = "module 0x1::test { fun f() { t.contains(key); } }";
+    assert_eq!(transform(input), expected);
+}
+
+// -- simple_map --
+
+#[test]
+fn test_receiver_simple_map_contains_key() {
+    let input = "module 0x1::test { fun f() { simple_map::contains_key(&m, &key); } }";
+    let expected = "module 0x1::test { fun f() { m.contains_key(&key); } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_receiver_simple_map_add() {
+    let input = "module 0x1::test { fun f() { simple_map::add(&mut m, key, val); } }";
+    let expected = "module 0x1::test { fun f() { m.add(key, val); } }";
+    assert_eq!(transform(input), expected);
+}
+
+// -- negative cases --
+
+#[test]
+fn test_receiver_no_transform_unknown_func() {
+    // Unknown module::func should not be transformed
+    let input = "module 0x1::test { fun f() { my_module::do_thing(&obj, x); } }";
+    assert_eq!(transform(input), input);
+}
+
+#[test]
+fn test_receiver_no_transform_unqualified() {
+    // Unqualified function call should not be transformed
+    let input = "module 0x1::test { fun f() { push_back(&mut v, 42); } }";
+    assert_eq!(transform(input), input);
+}
+
+// -- integration: receiver style + other transforms combined --
+
+#[test]
+fn test_receiver_combined_with_other_transforms() {
+    let input = r#"module 0x1::counter {
+    struct Counters has key {
+        data: vector<u64>,
+    }
+
+    public fun add(addr: address) acquires Counters {
+        let counters = borrow_global_mut<Counters>(addr);
+        vector::push_back(&mut counters.data, 0);
+    }
+
+    public fun get(addr: address, i: u64): u64 acquires Counters {
+        *vector::borrow(&borrow_global<Counters>(addr).data, i)
+    }
+
+    public fun len(addr: address): u64 acquires Counters {
+        vector::length(&borrow_global<Counters>(addr).data)
+    }
+}"#;
+    let expected = r#"module 0x1::counter {
+    struct Counters has key {
+        data: vector<u64>,
+    }
+
+    public fun add(addr: address) {
+        let counters = &mut Counters[addr];
+        counters.data.push_back(0);
+    }
+
+    public fun get(addr: address, i: u64): u64 {
+        Counters[addr].data[i]
+    }
+
+    public fun len(addr: address): u64 {
+        Counters[addr].data.length()
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}

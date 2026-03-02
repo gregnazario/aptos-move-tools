@@ -211,6 +211,168 @@ fn try_vector_borrow_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit
     })
 }
 
+/// Known stdlib functions that support receiver-style (dot) calls.
+/// These have a `self`/`&self`/`&mut self` first parameter in their Move 2 definition.
+/// Note: vector::borrow, vector::borrow_mut, and vector::empty are handled separately
+/// by dedicated transforms (index syntax and vector literal).
+fn is_receiver_style_func(name: &str) -> bool {
+    matches!(
+        name,
+        // vector
+        "vector::push_back"
+            | "vector::pop_back"
+            | "vector::length"
+            | "vector::is_empty"
+            | "vector::contains"
+            | "vector::index_of"
+            | "vector::append"
+            | "vector::reverse"
+            | "vector::swap"
+            | "vector::remove"
+            | "vector::swap_remove"
+            | "vector::destroy_empty"
+            | "vector::for_each"
+            | "vector::for_each_ref"
+            | "vector::for_each_mut"
+            | "vector::map"
+            | "vector::map_ref"
+            | "vector::filter"
+            | "vector::zip"
+            | "vector::fold"
+            | "vector::any"
+            | "vector::all"
+            | "vector::enumerate_ref"
+            | "vector::enumerate_mut"
+            | "vector::flatten"
+            | "vector::trim"
+            | "vector::trim_reverse"
+            // option
+            | "option::is_some"
+            | "option::is_none"
+            | "option::borrow"
+            | "option::borrow_mut"
+            | "option::borrow_with_default"
+            | "option::get_with_default"
+            | "option::extract"
+            | "option::fill"
+            | "option::swap"
+            | "option::swap_or_fill"
+            | "option::contains"
+            | "option::destroy_some"
+            | "option::destroy_none"
+            | "option::destroy_with_default"
+            // string / string_utils
+            | "string::length"
+            | "string::bytes"
+            | "string::is_empty"
+            | "string::sub_string"
+            | "string::append"
+            | "string::append_utf8"
+            | "string::insert"
+            // signer
+            | "signer::address_of"
+            // table
+            | "table::add"
+            | "table::borrow"
+            | "table::borrow_mut"
+            | "table::borrow_with_default"
+            | "table::contains"
+            | "table::remove"
+            | "table::upsert"
+            | "table::destroy"
+            // smart_table
+            | "smart_table::add"
+            | "smart_table::borrow"
+            | "smart_table::borrow_mut"
+            | "smart_table::borrow_with_default"
+            | "smart_table::contains"
+            | "smart_table::remove"
+            | "smart_table::length"
+            | "smart_table::upsert"
+            | "smart_table::destroy_empty"
+            | "smart_table::destroy"
+            // smart_vector
+            | "smart_vector::push_back"
+            | "smart_vector::pop_back"
+            | "smart_vector::length"
+            | "smart_vector::is_empty"
+            | "smart_vector::borrow"
+            | "smart_vector::borrow_mut"
+            | "smart_vector::append"
+            | "smart_vector::contains"
+            | "smart_vector::destroy_empty"
+            | "smart_vector::remove"
+            | "smart_vector::swap_remove"
+            // simple_map
+            | "simple_map::borrow"
+            | "simple_map::borrow_mut"
+            | "simple_map::contains_key"
+            | "simple_map::add"
+            | "simple_map::remove"
+            | "simple_map::length"
+            | "simple_map::keys"
+            | "simple_map::values"
+            | "simple_map::destroy_empty"
+            | "simple_map::upsert"
+            // coin
+            | "coin::value"
+            | "coin::merge"
+            | "coin::extract"
+            | "coin::extract_all"
+    )
+}
+
+/// Try to convert module::func(first_arg, rest...) → first_arg.func(rest...).
+fn try_receiver_style_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
+    let func_text = get_func_text(node, source)?;
+
+    // Must be a module-qualified call (contains ::)
+    let colon_pos = func_text.find("::")?;
+    let func_name = &func_text[colon_pos + 2..];
+
+    if !is_receiver_style_func(func_text) {
+        return None;
+    }
+
+    let args = node.child_by_field_name("arguments")?;
+    let arg_count = args.named_child_count() as u32;
+    if arg_count == 0 {
+        return None;
+    }
+
+    let first_arg = args.named_child(0)?;
+
+    // Strip borrow from first arg if it's a borrow_expression (compiler auto-borrows)
+    let obj_text = if first_arg.kind() == "borrow_expression" {
+        first_arg.named_child(0)?.utf8_text(source).ok()?
+    } else {
+        first_arg.utf8_text(source).ok()?
+    };
+
+    // Extract remaining arguments by byte range (preserves original formatting)
+    let rest_args = if arg_count > 1 {
+        let second = args.named_child(1)?;
+        let last = args.named_child(arg_count - 1)?;
+        std::str::from_utf8(&source[second.start_byte()..last.end_byte()]).ok()?
+    } else {
+        ""
+    };
+
+    // In receiver style, type args need :: prefix: v.remove::<u64>(i)
+    let type_args_str = if let Some(ta) = node.child_by_field_name("type_arguments") {
+        format!("::{}", ta.utf8_text(source).ok()?)
+    } else {
+        String::new()
+    };
+
+    Some(Edit {
+        start_byte: node.start_byte(),
+        end_byte: node.end_byte(),
+        replacement: format!("{obj_text}.{func_name}{type_args_str}({rest_args})"),
+        rule: "receiver_style",
+    })
+}
+
 /// Try to strip redundant parentheses around a cast expression: (x as u64) → x as u64.
 fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
     if node.named_child_count() != 1 {
@@ -320,6 +482,14 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
         }
     }
 
+    // module::func(obj, ...) → obj.func(...)  (receiver-style stdlib calls)
+    if node.kind() == "call_expression" {
+        if let Some(edit) = try_receiver_style_edit(node, source) {
+            edits.push(edit);
+            return;
+        }
+    }
+
     // (x as u64) → x as u64  (redundant cast parens)
     if node.kind() == "parenthesized_expression" {
         if let Some(edit) = try_cast_paren_edit(node, source) {
@@ -398,7 +568,7 @@ fn main() {
     let mut files_modified = 0;
 
     for path in &args[1..] {
-        let source = match fs::read_to_string(path) {
+        let mut source = match fs::read_to_string(path) {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("Error reading {}: {}", path, e);
@@ -406,34 +576,45 @@ fn main() {
             }
         };
 
-        let tree = match parser.parse(&source, None) {
-            Some(t) => t,
-            None => {
-                eprintln!("Error parsing {}", path);
-                process::exit(1);
+        let mut file_edits = 0;
+
+        // Multi-pass: nested transforms (e.g., vector::borrow wrapping borrow_global)
+        // may leave inner expressions untransformed on the first pass.
+        loop {
+            let tree = match parser.parse(&source, None) {
+                Some(t) => t,
+                None => {
+                    eprintln!("Error parsing {}", path);
+                    process::exit(1);
+                }
+            };
+
+            let mut edits = Vec::new();
+            collect_edits(tree.root_node(), source.as_bytes(), &mut edits);
+
+            if edits.is_empty() {
+                break;
             }
-        };
 
-        let mut edits = Vec::new();
-        collect_edits(tree.root_node(), source.as_bytes(), &mut edits);
+            for edit in &edits {
+                let line = source[..edit.start_byte].matches('\n').count() + 1;
+                eprintln!("  {}:{}: [{}]", path, line, edit.rule);
+            }
 
-        if edits.is_empty() {
+            file_edits += edits.len();
+            source = apply_edits(&source, edits);
+        }
+
+        if file_edits == 0 {
             continue;
         }
 
-        let num_edits = edits.len();
-        for edit in &edits {
-            let line = source[..edit.start_byte].matches('\n').count() + 1;
-            eprintln!("  {}:{}: [{}]", path, line, edit.rule);
-        }
-
-        let result = apply_edits(&source, edits);
-        if let Err(e) = fs::write(path, &result) {
+        if let Err(e) = fs::write(path, &source) {
             eprintln!("Error writing {}: {}", path, e);
             process::exit(1);
         }
 
-        total_edits += num_edits;
+        total_edits += file_edits;
         files_modified += 1;
     }
 
