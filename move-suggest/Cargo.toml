@@ -1,0 +1,11 @@
+[package]
+name = "move-suggest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tree-sitter = "0.26"
+tree-sitter-move-on-aptos = { git = "https://github.com/aptos-labs/tree-sitter-move-on-aptos", rev = "12906b341de7cef81cf03d7d91dae51d8a9299e7" }
+
+[dev-dependencies]
+tempfile = "3"
