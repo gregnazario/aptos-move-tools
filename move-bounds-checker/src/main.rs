@@ -82,7 +82,15 @@ fn count_named_children(node: tree_sitter::Node) -> usize {
 fn is_type_node(kind: &str) -> bool {
     matches!(
         kind,
-        "apply_type" | "primitive_type" | "ref_type" | "tuple_type" | "function_type"
+        "apply_type"
+            | "primitive_type"
+            | "ref_type"
+            | "tuple_type"
+            | "function_type"
+            // When `>>` is ambiguous (depth-2 nested generics like `extract<B<A>>()`),
+            // tree-sitter misparses the call as a binary_expression. The inner type
+            // `B<A>` appears as a `generic_name_expression` instead of `apply_type`.
+            | "generic_name_expression"
     )
 }
 
@@ -149,7 +157,20 @@ fn count_blocks_inner(node: tree_sitter::Node, count: &mut usize) {
 // ─── Check 5: Type Node Count ─────────────────────────────────
 
 fn count_type_nodes(node: tree_sitter::Node) -> usize {
-    let mut count = if is_type_node(node.kind()) { 1 } else { 0 };
+    let kind = node.kind();
+    let mut count = if is_type_node(kind) { 1 } else { 0 };
+
+    // In `x is Foo | Bar`, the native compiler counts each variant as a type node.
+    // Tree-sitter represents variants as name_access_chain children of is_variant_list.
+    if kind == "is_variant_list" {
+        let mut cursor = node.walk();
+        for child in node.named_children(&mut cursor) {
+            if child.kind() == "name_access_chain" {
+                count += 1;
+            }
+        }
+    }
+
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
         count += count_type_nodes(child);
