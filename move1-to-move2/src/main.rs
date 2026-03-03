@@ -402,6 +402,241 @@ fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
     })
 }
 
+/// Check if an identifier appears anywhere in a subtree.
+fn contains_identifier(node: tree_sitter::Node, source: &[u8], name: &str) -> bool {
+    if node.kind() == "identifier" {
+        if node.utf8_text(source).ok() == Some(name) {
+            return true;
+        }
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if contains_identifier(child, source, name) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Try to convert a while loop with counter to a for loop:
+///   let i = 0; while (i < len) { ...body...; i = i + 1; }
+/// → for (i in 0..len) { ...body... }
+///
+/// Returns multiple edits (remove let, replace while header, remove tail increment).
+fn try_while_to_for_edits(node: tree_sitter::Node, source: &[u8]) -> Option<Vec<Edit>> {
+    // Find the condition (binary_expression) and body (block) by scanning children
+    let mut condition = None;
+    let mut body = None;
+    let count = node.child_count() as u32;
+    for i in 0..count {
+        let child = node.child(i).unwrap();
+        if child.kind() == "binary_expression" && condition.is_none() {
+            condition = Some(child);
+        } else if child.kind() == "block" {
+            body = Some(child);
+        }
+    }
+    let condition = condition?;
+    let body = body?;
+
+    // Condition must be `var < bound`
+    let cond_lhs = condition.child_by_field_name("lhs")?;
+    let cond_op = condition.child_by_field_name("operator")?;
+    let cond_rhs = condition.child_by_field_name("rhs")?;
+
+    if cond_op.utf8_text(source).ok()? != "<" {
+        return None;
+    }
+
+    let var_name = cond_lhs.utf8_text(source).ok()?;
+    let bound_text = cond_rhs.utf8_text(source).ok()?;
+
+    let body_named_count = body.named_child_count() as u32;
+    if body_named_count == 0 {
+        return None;
+    }
+
+    // Last named child of body must be an increment: var = var + 1 or var += 1
+    let last_stmt = body.named_child(body_named_count - 1)?;
+    if last_stmt.kind() != "assign_expression" {
+        return None;
+    }
+
+    let inc_lhs = last_stmt.child_by_field_name("lhs")?;
+    let inc_op = last_stmt.child_by_field_name("op")?;
+    let inc_lhs_text = inc_lhs.utf8_text(source).ok()?;
+
+    if inc_lhs_text != var_name {
+        return None;
+    }
+
+    let inc_op_text = inc_op.utf8_text(source).ok()?;
+    let is_increment = match inc_op_text {
+        "+=" => {
+            // var += 1
+            let inc_rhs = last_stmt.child_by_field_name("rhs")?;
+            inc_rhs.utf8_text(source).ok()? == "1"
+        }
+        "=" => {
+            // var = var + 1
+            let inc_rhs = last_stmt.child_by_field_name("rhs")?;
+            if inc_rhs.kind() != "binary_expression" {
+                return None;
+            }
+            let bin_lhs = inc_rhs.child_by_field_name("lhs")?;
+            let bin_op = inc_rhs.child_by_field_name("operator")?;
+            let bin_rhs = inc_rhs.child_by_field_name("rhs")?;
+            bin_lhs.utf8_text(source).ok()? == var_name
+                && bin_op.utf8_text(source).ok()? == "+"
+                && bin_rhs.utf8_text(source).ok()? == "1"
+        }
+        _ => false,
+    };
+    if !is_increment {
+        return None;
+    }
+
+    // Find the preceding `let var = start;` sibling
+    let mut prev = node.prev_sibling(); // skip the `;` token if any
+    while let Some(p) = prev {
+        if p.kind() == ";" {
+            prev = p.prev_sibling();
+            continue;
+        }
+        break;
+    }
+    let let_node = prev?;
+    if let_node.kind() != "let_expression" {
+        return None;
+    }
+
+    // Verify the let binds the same variable: first named child is bind_var
+    let bind_var = let_node.named_child(0)?;
+    if bind_var.kind() != "bind_var" {
+        return None;
+    }
+    if bind_var.utf8_text(source).ok()? != var_name {
+        return None;
+    }
+
+    // The start value is the last named child (e.g., `0` in `let i = 0`)
+    let named_count = let_node.named_child_count() as u32;
+    if named_count < 2 {
+        return None;
+    }
+    let start_value = let_node.named_child(named_count - 1)?;
+    let start_text = start_value.utf8_text(source).ok()?;
+
+    // Safety: bail if the loop variable is used after the while loop.
+    // A for loop scopes the variable to the body, so post-loop use would break.
+    let mut after = node.next_sibling();
+    while let Some(sib) = after {
+        if sib.kind() != ";" && contains_identifier(sib, source, var_name) {
+            return None;
+        }
+        after = sib.next_sibling();
+    }
+
+    // --- Generate edits ---
+    let mut result = Vec::new();
+
+    // Edit 1: Remove `let i = 0;` including trailing semicolon and whitespace up to next line
+    let let_start = let_node.start_byte();
+    // Find the semicolon after the let
+    let let_semi_end = {
+        let s = let_node.next_sibling();
+        if let Some(semi) = s {
+            if semi.kind() == ";" {
+                semi.end_byte()
+            } else {
+                let_node.end_byte()
+            }
+        } else {
+            let_node.end_byte()
+        }
+    };
+    // Expand to consume the leading whitespace on this line and the newline
+    let line_start = source[..let_start]
+        .iter()
+        .rposition(|&b| b == b'\n')
+        .map(|p| p + 1)
+        .unwrap_or(let_start);
+    // Only consume leading whitespace if the line contains only this statement
+    let before = &source[line_start..let_start];
+    let remove_start = if before.iter().all(|b| b.is_ascii_whitespace()) {
+        line_start
+    } else {
+        let_start
+    };
+    // Also consume the newline after the semicolon if present
+    let remove_end = if let_semi_end < source.len() && source[let_semi_end] == b'\n' {
+        let_semi_end + 1
+    } else {
+        let_semi_end
+    };
+
+    result.push(Edit {
+        start_byte: remove_start,
+        end_byte: remove_end,
+        replacement: String::new(),
+        rule: "while_to_for",
+    });
+
+    // Edit 2: Replace `while (var < bound)` with `for (var in start..bound)`
+    // The while keyword + condition span from node start to end of the `)` before the block
+    let while_kw_start = node.start_byte();
+    let body_start = body.start_byte();
+    result.push(Edit {
+        start_byte: while_kw_start,
+        end_byte: body_start,
+        replacement: format!("for ({var_name} in {start_text}..{bound_text}) "),
+        rule: "while_to_for",
+    });
+
+    // Edit 3: Remove the tail increment statement and its semicolon
+    // Find the previous statement/semicolon boundary to remove whitespace cleanly
+    let inc_start = last_stmt.start_byte();
+    let inc_end = {
+        let s = last_stmt.next_sibling();
+        if let Some(semi) = s {
+            if semi.kind() == ";" {
+                semi.end_byte()
+            } else {
+                last_stmt.end_byte()
+            }
+        } else {
+            last_stmt.end_byte()
+        }
+    };
+    // Consume leading whitespace on this line
+    let inc_line_start = source[..inc_start]
+        .iter()
+        .rposition(|&b| b == b'\n')
+        .map(|p| p + 1)
+        .unwrap_or(inc_start);
+    let inc_before = &source[inc_line_start..inc_start];
+    let inc_remove_start = if inc_before.iter().all(|b| b.is_ascii_whitespace()) {
+        inc_line_start
+    } else {
+        inc_start
+    };
+    // Consume trailing newline
+    let inc_remove_end = if inc_end < source.len() && source[inc_end] == b'\n' {
+        inc_end + 1
+    } else {
+        inc_end
+    };
+
+    result.push(Edit {
+        start_byte: inc_remove_start,
+        end_byte: inc_remove_end,
+        replacement: String::new(),
+        rule: "while_to_for",
+    });
+
+    Some(result)
+}
+
 /// Strip the & or &mut prefix from a borrow_global replacement string.
 fn strip_borrow_prefix(s: &str) -> String {
     if s.starts_with("&mut ") {
@@ -531,6 +766,14 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
             rule: "strip_acquires",
         });
         return;
+    }
+
+    // let i = 0; while (i < len) { ...; i = i + 1; } → for (i in 0..len) { ... }
+    if node.kind() == "while_expression" {
+        if let Some(for_edits) = try_while_to_for_edits(node, source) {
+            edits.extend(for_edits);
+            return;
+        }
     }
 
     // public(friend) → friend, public(package) → package

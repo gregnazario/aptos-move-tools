@@ -35,6 +35,7 @@ Exit codes: `0` = success, `1` = error.
 | `public(friend) fun f()` | `friend fun f()` | visibility |
 | `public(package) fun f()` | `package fun f()` | visibility |
 | `x = x + y` | `x += y` | compound assign (`+`,`-`,`*`,`/`,`%`) |
+| `let i = 0; while (i < n) { ...; i = i + 1; }` | `for (i in 0..n) { ...; }` | while to for |
 
 ### `borrow_global` / `borrow_global_mut` → index syntax
 
@@ -157,3 +158,27 @@ x *= y;
 ```
 
 Supports `+`, `-`, `*`, `/`, `%`. Only triggers when the left-hand side of the assignment exactly matches the left operand of the binary expression.
+
+### `while_to_for`
+
+Converts counter-based `while` loops to Move 2 `for` loops with ranges.
+
+```move
+# Before
+let i = 0;
+while (i < len) {
+    do_thing(i);
+    i = i + 1;
+};
+
+# After
+for (i in 0..len) {
+    do_thing(i);
+};
+```
+
+Requirements for conversion:
+- A `let i = 0;` (or other literal) immediately precedes the `while`
+- The condition is `i < bound`
+- The last statement in the loop body is `i = i + 1`
+- The loop variable `i` is **not used** after the `while` loop (since `for` scopes it to the loop body)

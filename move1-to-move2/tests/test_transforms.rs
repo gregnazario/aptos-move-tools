@@ -689,3 +689,145 @@ fn test_receiver_combined_with_other_transforms() {
 }"#;
     assert_eq!(transform(input), expected);
 }
+
+// ── While-to-for loop transforms ─────────────────────────────────────────────
+
+#[test]
+fn test_while_to_for_basic() {
+    let input = r#"module 0x1::test {
+    fun f() {
+        let len = 10;
+        let i = 0;
+        while (i < len) {
+            do_thing(i);
+            i = i + 1;
+        };
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f() {
+        let len = 10;
+        for (i in 0..len) {
+            do_thing(i);
+        };
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_while_to_for_compound_increment() {
+    let input = r#"module 0x1::test {
+    fun f() {
+        let i = 0;
+        while (i < n) {
+            do_thing(i);
+            i += 1;
+        };
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f() {
+        for (i in 0..n) {
+            do_thing(i);
+        };
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_while_to_for_nonzero_start() {
+    let input = r#"module 0x1::test {
+    fun f() {
+        let i = 5;
+        while (i < len) {
+            do_thing(i);
+            i = i + 1;
+        };
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f() {
+        for (i in 5..len) {
+            do_thing(i);
+        };
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_while_to_for_not_converted_if_var_used_after() {
+    // i is used after the loop — must NOT convert to for
+    // (compound_assign still runs: i = i + 1 → i += 1)
+    let input = r#"module 0x1::test {
+    fun f() {
+        let i = 0;
+        while (i < len) {
+            do_thing(i);
+            i = i + 1;
+        };
+        use_value(i);
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f() {
+        let i = 0;
+        while (i < len) {
+            do_thing(i);
+            i += 1;
+        };
+        use_value(i);
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_while_to_for_no_match_wrong_increment() {
+    // Increment by 2, not 1 — should not convert to for loop
+    // But compound_assign still converts i = i + 2 → i += 2
+    let input = r#"module 0x1::test {
+    fun f() {
+        let i = 0;
+        while (i < len) {
+            do_thing(i);
+            i = i + 2;
+        };
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f() {
+        let i = 0;
+        while (i < len) {
+            do_thing(i);
+            i += 2;
+        };
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_while_to_for_no_match_no_preceding_let() {
+    // No let binding before while — should not convert to for loop
+    // But compound_assign still converts i = i + 1 → i += 1
+    let input = r#"module 0x1::test {
+    fun f(i: u64) {
+        while (i < len) {
+            do_thing(i);
+            i = i + 1;
+        };
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f(i: u64) {
+        while (i < len) {
+            do_thing(i);
+            i += 1;
+        };
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
