@@ -347,6 +347,39 @@ fn test_cast_paren_u8() {
     assert_eq!(transform(input), expected);
 }
 
+#[test]
+fn test_cast_paren_in_assign() {
+    let input = "module 0x1::test { fun f() { x = (y as u64); } }";
+    let expected = "module 0x1::test { fun f() { x = y as u64; } }";
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
+fn test_cast_paren_kept_in_binary_add() {
+    // Parens around cast in binary expression must stay
+    let input = "module 0x1::test { fun f() { let x = (y as u64) + 1; } }";
+    assert_eq!(transform(input), input);
+}
+
+#[test]
+fn test_cast_paren_kept_in_binary_mul() {
+    let input = "module 0x1::test { fun f() { let x = (y as u64) * 2; } }";
+    assert_eq!(transform(input), input);
+}
+
+#[test]
+fn test_cast_paren_kept_in_comparison() {
+    let input = "module 0x1::test { fun f() { if ((x as u64) > 0) {}; } }";
+    assert_eq!(transform(input), input);
+}
+
+#[test]
+fn test_cast_paren_kept_rhs_of_binary() {
+    // Cast as right operand of binary expression
+    let input = "module 0x1::test { fun f() { let x = a + (b as u64); } }";
+    assert_eq!(transform(input), input);
+}
+
 // ── Vector index syntax transforms ───────────────────────────────────────────
 
 #[test]

@@ -374,6 +374,9 @@ fn try_receiver_style_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edi
 }
 
 /// Try to strip redundant parentheses around a cast expression: (x as u64) → x as u64.
+/// Only strips when the cast is in an isolated position (function argument, let/assign
+/// value, block return). Keeps parens when the cast is an operand of a binary expression,
+/// comparison, or other context where removing parens could affect readability or semantics.
 fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
     if node.named_child_count() != 1 {
         return None;
@@ -382,6 +385,21 @@ fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
     if inner.kind() != "cast_expression" {
         return None;
     }
+
+    // Only strip in contexts where the cast stands alone
+    let parent = node.parent()?;
+    let safe = match parent.kind() {
+        "arg_list" => true,
+        "let_expression" => true,
+        "assign_expression" => true,
+        "block" => true,
+        "return_expression" => true,
+        _ => false,
+    };
+    if !safe {
+        return None;
+    }
+
     let inner_text = inner.utf8_text(source).ok()?;
     Some(Edit {
         start_byte: node.start_byte(),
