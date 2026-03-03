@@ -102,7 +102,7 @@ o.is_some();
 s.append(other);
 ```
 
-Supported modules: `vector`, `option`, `string`, `table`, `smart_table`, `smart_vector`, `simple_map`, `coin`.
+Supported modules: `vector`, `option`, `string`, `table`, `smart_table`, `smart_vector`, `simple_map`.
 
 ### `cast_parens`
 

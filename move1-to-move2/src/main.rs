@@ -312,11 +312,6 @@ fn is_receiver_style_func(name: &str) -> bool {
             | "simple_map::values"
             | "simple_map::destroy_empty"
             | "simple_map::upsert"
-            // coin
-            | "coin::value"
-            | "coin::merge"
-            | "coin::extract"
-            | "coin::extract_all"
     )
 }
 
