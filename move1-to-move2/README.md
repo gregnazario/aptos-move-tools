@@ -28,7 +28,6 @@ Exit codes: `0` = success, `1` = error.
 | `vector::length(&v)` | `v.length()` | receiver style |
 | `option::is_some(&o)` | `o.is_some()` | receiver style |
 | `string::length(&s)` | `s.length()` | receiver style |
-| `signer::address_of(s)` | `s.address_of()` | receiver style |
 | `table::add(&mut t, k, v)` | `t.add(k, v)` | receiver style |
 | `simple_map::contains_key(&m, &k)` | `m.contains_key(&k)` | receiver style |
 | `(x as u64)` | `x as u64` | cast paren removal |
@@ -95,17 +94,15 @@ vector::push_back(&mut v, 42);
 vector::length(&v);
 option::is_some(&o);
 string::append(&mut s, other);
-signer::address_of(account);
 
 # After
 v.push_back(42);
 v.length();
 o.is_some();
 s.append(other);
-account.address_of();
 ```
 
-Supported modules: `vector`, `option`, `string`, `signer`, `table`, `smart_table`, `smart_vector`, `simple_map`, `coin`.
+Supported modules: `vector`, `option`, `string`, `table`, `smart_table`, `smart_vector`, `simple_map`, `coin`.
 
 ### `cast_parens`
 

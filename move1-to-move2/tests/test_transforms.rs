@@ -591,14 +591,12 @@ fn test_receiver_string_sub_string() {
     assert_eq!(transform(input), expected);
 }
 
-// -- signer --
+// -- signer (address_of is NOT a receiver-style function) --
 
 #[test]
-fn test_receiver_signer_address_of() {
+fn test_signer_address_of_not_transformed() {
     let input = "module 0x1::test { fun f(account: &signer) { signer::address_of(account); } }";
-    let expected =
-        "module 0x1::test { fun f(account: &signer) { account.address_of(); } }";
-    assert_eq!(transform(input), expected);
+    assert_eq!(transform(input), input);
 }
 
 // -- table --

@@ -269,8 +269,6 @@ fn is_receiver_style_func(name: &str) -> bool {
             | "string::append"
             | "string::append_utf8"
             | "string::insert"
-            // signer
-            | "signer::address_of"
             // table
             | "table::add"
             | "table::borrow"
