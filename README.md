@@ -14,6 +14,10 @@ Most tools parse Move source using the `tree-sitter-move-on-aptos` grammar — n
 | [**move-bounds-checker-native**](move-bounds-checker-native/) | Same bounds checking using the native Move compiler parser for higher accuracy |
 | [**move1-to-move2**](move1-to-move2/) | Automated transformer that migrates Move 1 code to Move 2 syntax |
 
+## Requirements
+
+- **Rust 1.93** (enforced via `rust-toolchain.toml`)
+
 ## Building
 
 Each tool is a standalone Rust binary. From the tool's directory:
@@ -26,6 +30,19 @@ Or build all tools from the repo root:
 
 ```bash
 make release
+```
+
+## CI
+
+GitHub Actions runs on push/PR to `main`/`master`:
+
+- **Build**, **lint** (clippy + fmt), and **test** for: tools-base, move-suggest, move-bounds-checker, move1-to-move2
+- `move-bounds-checker-native` and `named-address-recover` require aptos-core path dependencies and are excluded from CI
+
+Local CI check (buildable tools only):
+
+```bash
+make ci
 ```
 
 ## How They Work

@@ -1,6 +1,6 @@
 //! Integration tests for tools-base.
 
-use tools_base::{apply_edits, collect_move_files, line_col, new_move_parser, Edit};
+use tools_base::{Edit, apply_edits, collect_move_files, line_col, new_move_parser};
 
 #[test]
 fn test_line_col() {

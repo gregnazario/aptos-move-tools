@@ -399,20 +399,20 @@ fn check_function(
     }
 
     // Check 6: return values
-    if let Some(ret) = node.child_by_field_name("return_type") {
-        if ret.kind() == "tuple_type" {
-            let count = count_named_children(ret);
-            if count > config.max_function_return_values {
-                violations.push(Violation {
-                    kind: "max_function_return_values",
-                    entity_kind: "function",
-                    entity: name.clone(),
-                    actual: count,
-                    limit: config.max_function_return_values,
-                    line,
-                    col,
-                });
-            }
+    if let Some(ret) = node.child_by_field_name("return_type")
+        && ret.kind() == "tuple_type"
+    {
+        let count = count_named_children(ret);
+        if count > config.max_function_return_values {
+            violations.push(Violation {
+                kind: "max_function_return_values",
+                entity_kind: "function",
+                entity: name.clone(),
+                actual: count,
+                limit: config.max_function_return_values,
+                line,
+                col,
+            });
         }
     }
 
@@ -998,8 +998,10 @@ fn print_identify_report(
 
 // ─── CLI ───────────────────────────────────────────────────────
 
+type ConfigOverride = fn(&mut BoundsConfig, usize);
+
 fn parse_override(arg: &str, config: &mut BoundsConfig) -> bool {
-    let overrides: &[(&str, fn(&mut BoundsConfig, usize))] = &[
+    let overrides: &[(&str, ConfigOverride)] = &[
         ("--max-loop-depth=", |c, v| c.max_loop_depth = v),
         ("--max-generic-instantiation-length=", |c, v| {
             c.max_generic_instantiation_length = v
@@ -1076,7 +1078,9 @@ fn main() {
     }
 
     if paths.is_empty() {
-        eprintln!("Usage: move-bounds-checker <dir> [--identify] [--all] [--explorer-local=PATH] [--max-loop-depth=N ...]");
+        eprintln!(
+            "Usage: move-bounds-checker <dir> [--identify] [--all] [--explorer-local=PATH] [--max-loop-depth=N ...]"
+        );
         process::exit(2);
     }
 

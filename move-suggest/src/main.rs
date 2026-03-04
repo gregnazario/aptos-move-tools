@@ -7,7 +7,7 @@ mod receiver_style;
 mod suggest;
 mod vector_literal;
 
-use suggest::{apply_suggestions, line_col, Suggestion};
+use suggest::{Suggestion, apply_suggestions, line_col};
 use tools_base::new_move_parser;
 
 // ANSI color codes

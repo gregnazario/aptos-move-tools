@@ -220,9 +220,9 @@ fn is_keyword(name: &str) -> bool {
 
 // ─── Bytecode Scanning ─────────────────────────────────────────
 
+use move_binary_format::CompiledModule;
 use move_binary_format::access::ModuleAccess;
 use move_binary_format::internals::ModuleIndex;
-use move_binary_format::CompiledModule;
 
 /// Returns (hex_address, module_name) pairs from a compiled .mv file.
 fn scan_bytecode_addresses(bytes: &[u8]) -> Vec<(String, String)> {
@@ -620,7 +620,9 @@ fn main() {
             "--verbose" => verbose = true,
             "--help" | "-h" => {
                 eprintln!("Usage: named-address-recover <path> [--toml] [--verbose]");
-                eprintln!("       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]");
+                eprintln!(
+                    "       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]"
+                );
                 eprintln!();
                 eprintln!(
                     "Recovers named address mappings from a Move package by cross-referencing"
@@ -631,7 +633,9 @@ fn main() {
                 eprintln!(
                     "  --address 0xHEX  Fetch modules from Aptos mainnet instead of local path"
                 );
-                eprintln!("  --source <path>  Supplement with local .move source files (use with --address)");
+                eprintln!(
+                    "  --source <path>  Supplement with local .move source files (use with --address)"
+                );
                 eprintln!("  --toml           Output as [addresses] TOML section");
                 eprintln!("  --verbose        Show source attribution for each mapping");
                 process::exit(0);
@@ -741,7 +745,9 @@ fn main() {
             Some(p) => PathBuf::from(p),
             None => {
                 eprintln!("Usage: named-address-recover <path> [--toml] [--verbose]");
-                eprintln!("       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]");
+                eprintln!(
+                    "       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]"
+                );
                 process::exit(2);
             }
         };

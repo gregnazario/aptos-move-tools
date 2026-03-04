@@ -1,6 +1,6 @@
 use tree_sitter::Node;
 
-use crate::suggest::{get_args, is_in_consumed, parse_qualified_call, Suggestion};
+use crate::suggest::{Suggestion, get_args, is_in_consumed, parse_qualified_call};
 
 /// How the first argument (receiver) is passed.
 #[derive(Clone, Copy)]
@@ -314,11 +314,11 @@ pub fn collect_receiver_style(
     if is_in_consumed(node, consumed) {
         return;
     }
-    if node.kind() == "call_expression" {
-        if let Some(s) = try_receiver_style(node, source) {
-            suggestions.push(s);
-            return;
-        }
+    if node.kind() == "call_expression"
+        && let Some(s) = try_receiver_style(node, source)
+    {
+        suggestions.push(s);
+        return;
     }
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {

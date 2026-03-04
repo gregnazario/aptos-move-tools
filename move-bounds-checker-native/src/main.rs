@@ -1299,7 +1299,9 @@ fn main() {
     }
 
     if paths.is_empty() {
-        eprintln!("Usage: move-bounds-checker-native <dir> [--identify] [--all] [--explorer-local=PATH] [--max-loop-depth=N ...]");
+        eprintln!(
+            "Usage: move-bounds-checker-native <dir> [--identify] [--all] [--explorer-local=PATH] [--max-loop-depth=N ...]"
+        );
         process::exit(2);
     }
 

@@ -14,5 +14,5 @@ pub mod tree;
 
 pub use files::collect_move_files;
 pub use parser::new_move_parser;
-pub use source::{apply_edits, line_col, Edit, IntoEdit};
+pub use source::{Edit, IntoEdit, apply_edits, line_col};
 pub use tree::{count_named_children, node_text};

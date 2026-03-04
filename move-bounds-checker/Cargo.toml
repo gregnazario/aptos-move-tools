@@ -1,7 +1,8 @@
 [package]
 name = "move-bounds-checker"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+rust-version = "1.93"
 
 [dependencies]
 tools-base = { path = "../tools-base" }

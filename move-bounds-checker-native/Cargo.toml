@@ -1,7 +1,8 @@
 [package]
 name = "move-bounds-checker-native"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+rust-version = "1.93"
 
 [dependencies]
 legacy-move-compiler = { path = "/Users/greg/git/aptos-core/third_party/move/move-compiler-v2/legacy-move-compiler" }
