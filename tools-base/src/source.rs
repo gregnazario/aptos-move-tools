@@ -55,11 +55,15 @@ pub fn line_col(source: &str, byte_offset: usize) -> (usize, usize) {
 
 /// Apply edits back-to-front to preserve byte offsets.
 /// Edits are sorted by `start_byte` descending before application.
+/// Operates on raw bytes so offsets need not be on UTF-8 char boundaries.
 pub fn apply_edits<E: IntoEdit>(source: &str, mut edits: Vec<E>) -> String {
     edits.sort_by_key(|b| std::cmp::Reverse(b.start_byte()));
-    let mut result = source.to_string();
+    let mut result = source.as_bytes().to_vec();
     for e in &edits {
-        result.replace_range(e.start_byte()..e.end_byte(), e.replacement());
+        let start = e.start_byte();
+        let end = e.end_byte();
+        let replacement = e.replacement().as_bytes();
+        result.splice(start..end, replacement.iter().copied());
     }
-    result
+    String::from_utf8(result).expect("edits produced invalid UTF-8")
 }

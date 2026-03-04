@@ -5,10 +5,10 @@ edition = "2024"
 rust-version = "1.93"
 
 [dependencies]
-legacy-move-compiler = { path = "/Users/greg/git/aptos-core/third_party/move/move-compiler-v2/legacy-move-compiler" }
-move-command-line-common = { path = "/Users/greg/git/aptos-core/third_party/move/move-command-line-common" }
-move-ir-types = { path = "/Users/greg/git/aptos-core/third_party/move/move-ir/types" }
-move-symbol-pool = { path = "/Users/greg/git/aptos-core/third_party/move/move-symbol-pool" }
+legacy-move-compiler = { path = "../aptos-core/third_party/move/move-compiler-v2/legacy-move-compiler" }
+move-command-line-common = { path = "../aptos-core/third_party/move/move-command-line-common" }
+move-ir-types = { path = "../aptos-core/third_party/move/move-ir/types" }
+move-symbol-pool = { path = "../aptos-core/third_party/move/move-symbol-pool" }
 rayon = "1"
 walkdir = "2"
 ureq = "3"

@@ -7,8 +7,8 @@ rust-version = "1.93"
 [dependencies]
 tools-base = { path = "../tools-base" }
 tree-sitter = "0.26"
-move-binary-format = { path = "/Users/greg/git/aptos-core/third_party/move/move-binary-format" }
-move-core-types = { path = "/Users/greg/git/aptos-core/third_party/move/move-core/types" }
+move-binary-format = { path = "../aptos-core/third_party/move/move-binary-format" }
+move-core-types = { path = "../aptos-core/third_party/move/move-core/types" }
 toml = "0.8"
 walkdir = "2"
 ureq = "3"

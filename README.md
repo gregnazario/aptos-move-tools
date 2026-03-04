@@ -46,6 +46,16 @@ Local CI check (buildable tools only):
 make ci
 ```
 
+### Building tools that require aptos-core
+
+`move-bounds-checker-native` and `named-address-recover` depend on packages from the [aptos-core](https://github.com/aptos-labs/aptos-core) repo. To build them, clone aptos-core as a sibling directory:
+
+```bash
+git clone https://github.com/aptos-labs/aptos-core.git ../aptos-core
+```
+
+Then `make build` (or `cargo build` in the tool directory) will succeed.
+
 ## How They Work
 
 The tree-sitter-based tools (`move-suggest`, `move-bounds-checker`, `move1-to-move2`) share the same approach:

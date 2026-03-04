@@ -30,6 +30,15 @@ fn test_apply_edits() {
 }
 
 #[test]
+fn test_apply_edits_unicode() {
+    // Byte-based application handles non-ASCII (avoids replace_range char-boundary panic)
+    let source = "café = 1"; // "café" is 5 bytes in UTF-8 (é is 2 bytes)
+    let edits = vec![Edit::new(0, 5, "tea")];
+    let result = apply_edits(source, edits);
+    assert_eq!(result, "tea = 1");
+}
+
+#[test]
 fn test_apply_edits_order_independent() {
     let source = "abc def ghi";
     let edits = vec![
