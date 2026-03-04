@@ -37,6 +37,7 @@ make release
 GitHub Actions runs on push/PR to `main`/`master`:
 
 - **Build**, **lint** (clippy + fmt), and **test** for: tools-base, move-suggest, move-bounds-checker, move1-to-move2
+- **Platforms**: Linux, Windows, macOS
 - `move-bounds-checker-native` and `named-address-recover` require aptos-core path dependencies and are excluded from CI
 
 Local CI check (buildable tools only):

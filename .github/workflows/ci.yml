@@ -11,11 +11,12 @@ env:
 
 jobs:
   build-lint-test:
-    name: Build, Lint & Test
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / ${{ matrix.tool }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         tool:
           - tools-base
           - move-suggest
@@ -30,15 +31,8 @@ jobs:
           toolchain: 1.93
           components: clippy, rustfmt
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: Build ${{ matrix.tool }}
         run: cargo build --manifest-path ${{ matrix.tool }}/Cargo.toml
