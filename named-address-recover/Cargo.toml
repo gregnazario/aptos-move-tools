@@ -1,0 +1,15 @@
+[package]
+name = "named-address-recover"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tree-sitter = "0.26"
+tree-sitter-move-on-aptos = { git = "https://github.com/aptos-labs/tree-sitter-move-on-aptos", rev = "12906b341de7cef81cf03d7d91dae51d8a9299e7" }
+move-binary-format = { path = "/Users/greg/git/aptos-core/third_party/move/move-binary-format" }
+move-core-types = { path = "/Users/greg/git/aptos-core/third_party/move/move-core/types" }
+toml = "0.8"
+walkdir = "2"
+ureq = "3"
+serde_json = "1"
+flate2 = "1"
