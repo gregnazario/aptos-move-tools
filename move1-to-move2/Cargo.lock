@@ -168,7 +168,6 @@ dependencies = [
  "tempfile",
  "tools-base",
  "tree-sitter",
- "tree-sitter-move-on-aptos",
 ]
 
 [[package]]

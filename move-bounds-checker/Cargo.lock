@@ -192,7 +192,6 @@ dependencies = [
  "regex",
  "tools-base",
  "tree-sitter",
- "tree-sitter-move-on-aptos",
  "ureq",
 ]
 

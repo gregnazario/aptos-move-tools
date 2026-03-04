@@ -5,7 +5,6 @@
 //! - Source location helpers (line/column from byte offset)
 //! - Edit application (apply multiple text replacements preserving offsets)
 //! - Move file discovery (collect .move files from paths/directories)
-//! - Optional parallel file processing with rayon
 
 pub mod files;
 pub mod parser;

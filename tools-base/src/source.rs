@@ -38,13 +38,18 @@ impl IntoEdit for Edit {
 }
 
 /// Compute 1-based line and column from a byte offset in source text.
+/// Uses a single clamped offset to avoid panics on invalid UTF-8 boundaries
+/// and to return correct column for offsets past EOF.
 pub fn line_col(source: &str, byte_offset: usize) -> (usize, usize) {
-    let prefix = &source[..byte_offset.min(source.len())];
-    let line = prefix.matches('\n').count() + 1;
+    let bytes = source.as_bytes();
+    let offset = byte_offset.min(bytes.len());
+    let prefix = &bytes[..offset];
+    let line = prefix.iter().filter(|&&b| b == b'\n').count() + 1;
     let col = prefix
-        .rfind('\n')
-        .map(|i| byte_offset - i)
-        .unwrap_or(byte_offset + 1);
+        .iter()
+        .rposition(|&b| b == b'\n')
+        .map(|i| offset - i)
+        .unwrap_or(offset + 1);
     (line, col)
 }
 

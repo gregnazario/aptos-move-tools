@@ -2,7 +2,7 @@ TOOLS := tools-base move-suggest move-bounds-checker move-bounds-checker-native 
 # Tools that build without aptos-core path deps (for CI)
 CI_TOOLS := tools-base move-suggest move-bounds-checker move1-to-move2
 
-.PHONY: all build release fmt lint clippy check test clean ci
+.PHONY: all build release fmt fmt-check lint clippy check test clean ci build-ci lint-ci test-ci
 
 all: build
 
