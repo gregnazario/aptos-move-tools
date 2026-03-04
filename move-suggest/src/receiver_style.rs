@@ -27,30 +27,162 @@ struct ReceiverRule {
 
 const RECEIVER_RULES: &[ReceiverRule] = &[
     // vector methods
-    ReceiverRule { module: "vector", function: "push_back",  receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 1, special: None },
-    ReceiverRule { module: "vector", function: "pop_back",   receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 0, special: None },
-    ReceiverRule { module: "vector", function: "length",     receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
-    ReceiverRule { module: "vector", function: "is_empty",   receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
-    ReceiverRule { module: "vector", function: "borrow",     receiver_arg: ReceiverArg::BorrowRef,    extra_args: 1, special: Some(SpecialForm::IndexRef) },
-    ReceiverRule { module: "vector", function: "borrow_mut", receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 1, special: Some(SpecialForm::IndexMutRef) },
-    ReceiverRule { module: "vector", function: "contains",   receiver_arg: ReceiverArg::BorrowRef,    extra_args: 1, special: None },
-    ReceiverRule { module: "vector", function: "index_of",   receiver_arg: ReceiverArg::BorrowRef,    extra_args: 1, special: None },
-    ReceiverRule { module: "vector", function: "append",     receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 1, special: None },
-    ReceiverRule { module: "vector", function: "reverse",    receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 0, special: None },
-    ReceiverRule { module: "vector", function: "swap",       receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 2, special: None },
+    ReceiverRule {
+        module: "vector",
+        function: "push_back",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 1,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "pop_back",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "length",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "is_empty",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "borrow",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 1,
+        special: Some(SpecialForm::IndexRef),
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "borrow_mut",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 1,
+        special: Some(SpecialForm::IndexMutRef),
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "contains",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 1,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "index_of",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 1,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "append",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 1,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "reverse",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "vector",
+        function: "swap",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 2,
+        special: None,
+    },
     // string methods
-    ReceiverRule { module: "string", function: "length",     receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
-    ReceiverRule { module: "string", function: "bytes",      receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
+    ReceiverRule {
+        module: "string",
+        function: "length",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "string",
+        function: "bytes",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
     // option methods
-    ReceiverRule { module: "option", function: "is_some",      receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
-    ReceiverRule { module: "option", function: "is_none",      receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
-    ReceiverRule { module: "option", function: "borrow",       receiver_arg: ReceiverArg::BorrowRef,    extra_args: 0, special: None },
-    ReceiverRule { module: "option", function: "borrow_mut",   receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 0, special: None },
-    ReceiverRule { module: "option", function: "extract",      receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 0, special: None },
-    ReceiverRule { module: "option", function: "contains",     receiver_arg: ReceiverArg::BorrowRef,    extra_args: 1, special: None },
-    ReceiverRule { module: "option", function: "swap",         receiver_arg: ReceiverArg::BorrowMutRef, extra_args: 1, special: None },
-    ReceiverRule { module: "option", function: "destroy_some", receiver_arg: ReceiverArg::Owned,        extra_args: 0, special: None },
-    ReceiverRule { module: "option", function: "destroy_none", receiver_arg: ReceiverArg::Owned,        extra_args: 0, special: None },
+    ReceiverRule {
+        module: "option",
+        function: "is_some",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "is_none",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "borrow",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "borrow_mut",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "extract",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "contains",
+        receiver_arg: ReceiverArg::BorrowRef,
+        extra_args: 1,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "swap",
+        receiver_arg: ReceiverArg::BorrowMutRef,
+        extra_args: 1,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "destroy_some",
+        receiver_arg: ReceiverArg::Owned,
+        extra_args: 0,
+        special: None,
+    },
+    ReceiverRule {
+        module: "option",
+        function: "destroy_none",
+        receiver_arg: ReceiverArg::Owned,
+        extra_args: 0,
+        special: None,
+    },
 ];
 
 /// Extract the inner expression text from a borrow_expression (&v or &mut v → v).
@@ -64,9 +196,7 @@ fn strip_borrow<'a>(node: Node<'a>, source: &'a [u8]) -> Option<&'a str> {
 
 /// Check if a borrow_expression uses &mut (vs &).
 fn is_mut_borrow(node: Node, source: &[u8]) -> bool {
-    node.utf8_text(source)
-        .unwrap_or("")
-        .starts_with("&mut")
+    node.utf8_text(source).unwrap_or("").starts_with("&mut")
 }
 
 fn try_receiver_style<'a>(node: Node<'a>, source: &'a [u8]) -> Option<Suggestion> {
@@ -158,7 +288,10 @@ fn try_receiver_style<'a>(node: Node<'a>, source: &'a [u8]) -> Option<Suggestion
 
             (
                 call.clone(),
-                format!("{}::{}({}) can be written as {}", module, member, orig_args, call),
+                format!(
+                    "{}::{}({}) can be written as {}",
+                    module, member, orig_args, call
+                ),
             )
         }
     };

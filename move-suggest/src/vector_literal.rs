@@ -4,9 +4,7 @@ use crate::suggest::{get_args, is_in_consumed, parse_qualified_call, Suggestion}
 
 /// Check if a borrow_expression uses &mut (vs &).
 fn is_mut_borrow(node: Node, source: &[u8]) -> bool {
-    node.utf8_text(source)
-        .unwrap_or("")
-        .starts_with("&mut")
+    node.utf8_text(source).unwrap_or("").starts_with("&mut")
 }
 
 // ── Simple cases ────────────────────────────────────────────────────────────
@@ -60,7 +58,10 @@ fn try_vector_singleton<'a>(node: Node<'a>, source: &'a [u8]) -> Option<Suggesti
         end_byte: node.end_byte(),
         replacement: replacement.clone(),
         rule: "vector_singleton_literal",
-        message: format!("vector::singleton({}) can be written as {}", elem, replacement),
+        message: format!(
+            "vector::singleton({}) can be written as {}",
+            elem, replacement
+        ),
     })
 }
 
@@ -128,11 +129,7 @@ fn match_vector_empty_let<'a>(node: Node<'a>, source: &'a [u8]) -> Option<(Strin
 
 /// Match `push_back(&mut var, elem)` or `vector::push_back(&mut var, elem)`.
 /// Returns the element text if matched.
-fn match_push_back_on_var<'a>(
-    node: Node<'a>,
-    var_name: &str,
-    source: &'a [u8],
-) -> Option<String> {
+fn match_push_back_on_var<'a>(node: Node<'a>, var_name: &str, source: &'a [u8]) -> Option<String> {
     if node.kind() != "call_expression" {
         return None;
     }
@@ -256,7 +253,8 @@ fn scan_block_for_multi_push(
 
                 if elements.len() >= 2 {
                     let elems_str = elements.join(", ");
-                    let replacement = format!("let {} = vector{}[{}];", var_name, type_args, elems_str);
+                    let replacement =
+                        format!("let {} = vector{}[{}];", var_name, type_args, elems_str);
                     suggestions.push(Suggestion {
                         start_byte: let_start,
                         end_byte: let_end,

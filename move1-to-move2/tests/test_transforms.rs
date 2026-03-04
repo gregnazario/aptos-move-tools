@@ -158,7 +158,8 @@ fn test_redundant_borrow_with_field_access() {
 #[test]
 fn test_borrow_global_with_field_access_no_prefix() {
     // borrow_global<T>(addr).field → T[addr].field (no & prefix when followed by .field)
-    let input = "module 0x1::test { fun f() { borrow_global<CapDelegateState<Feature>>(addr).root; } }";
+    let input =
+        "module 0x1::test { fun f() { borrow_global<CapDelegateState<Feature>>(addr).root; } }";
     let expected = "module 0x1::test { fun f() { CapDelegateState<Feature>[addr].root; } }";
     assert_eq!(transform(input), expected);
 }

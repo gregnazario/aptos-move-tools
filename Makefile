@@ -1,4 +1,4 @@
-TOOLS := move-suggest move-bounds-checker move-bounds-checker-native move1-to-move2 named-address-recover
+TOOLS := tools-base move-suggest move-bounds-checker move-bounds-checker-native move1-to-move2 named-address-recover
 
 .PHONY: all build release fmt lint clippy check test clean
 

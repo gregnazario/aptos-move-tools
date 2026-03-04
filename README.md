@@ -8,6 +8,7 @@ Most tools parse Move source using the `tree-sitter-move-on-aptos` grammar — n
 
 | Tool | Purpose |
 |------|---------|
+| [**tools-base**](tools-base/) | Shared library for building Move tools (parser, source helpers, file discovery) |
 | [**move-suggest**](move-suggest/) | Linter that suggests idiomatic Move 2 style (receiver syntax, vector literals, index notation) |
 | [**move-bounds-checker**](move-bounds-checker/) | Static checker that catches Aptos VM limit violations before deployment (tree-sitter) |
 | [**move-bounds-checker-native**](move-bounds-checker-native/) | Same bounds checking using the native Move compiler parser for higher accuracy |

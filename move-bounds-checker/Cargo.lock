@@ -190,10 +190,10 @@ version = "0.1.0"
 dependencies = [
  "rayon",
  "regex",
+ "tools-base",
  "tree-sitter",
  "tree-sitter-move-on-aptos",
  "ureq",
- "walkdir",
 ]
 
 [[package]]
@@ -409,6 +409,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "tools-base"
+version = "0.1.0"
+dependencies = [
+ "tree-sitter",
+ "tree-sitter-move-on-aptos",
+ "walkdir",
 ]
 
 [[package]]

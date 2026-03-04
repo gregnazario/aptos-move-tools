@@ -8,6 +8,7 @@ mod suggest;
 mod vector_literal;
 
 use suggest::{apply_suggestions, line_col, Suggestion};
+use tools_base::new_move_parser;
 
 // ANSI color codes
 const BOLD: &str = "\x1b[1m";
@@ -53,11 +54,7 @@ fn main() {
 
     let color = std::io::stdout().is_terminal();
 
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&tree_sitter_move_on_aptos::language())
-        .expect("Error loading Move grammar");
-
+    let mut parser = new_move_parser();
     let mut total_suggestions = 0;
 
     for path in &files {

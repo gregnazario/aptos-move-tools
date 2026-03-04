@@ -2,6 +2,8 @@ use std::env;
 use std::fs;
 use std::process;
 
+use tools_base::{apply_edits, new_move_parser, IntoEdit};
+
 #[derive(Debug)]
 struct Edit {
     start_byte: usize,
@@ -10,22 +12,23 @@ struct Edit {
     rule: &'static str,
 }
 
-fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
-    edits.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
-    let mut result = source.to_string();
-    for edit in &edits {
-        result.replace_range(edit.start_byte..edit.end_byte, &edit.replacement);
+impl IntoEdit for Edit {
+    fn start_byte(&self) -> usize {
+        self.start_byte
     }
-    result
+    fn end_byte(&self) -> usize {
+        self.end_byte
+    }
+    fn replacement(&self) -> &str {
+        &self.replacement
+    }
 }
 
 /// Check if a node is the object of a dot_expression (i.e., followed by .field).
 fn is_dot_object(node: tree_sitter::Node) -> bool {
     if let Some(parent) = node.parent() {
         if parent.kind() == "dot_expression" {
-            return parent
-                .child_by_field_name("object")
-                .map(|o| o.id()) == Some(node.id());
+            return parent.child_by_field_name("object").map(|o| o.id()) == Some(node.id());
         }
     }
     false
@@ -813,11 +816,7 @@ fn main() {
         process::exit(1);
     }
 
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&tree_sitter_move_on_aptos::language())
-        .expect("Error loading Move grammar");
-
+    let mut parser = new_move_parser();
     let mut total_edits = 0;
     let mut files_modified = 0;
 

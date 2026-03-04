@@ -1,12 +1,17 @@
 [package]
-name = "move1-to-move2"
+name = "tools-base"
 version = "0.1.0"
 edition = "2021"
+description = "Shared base library for aptos-move-tools"
 
 [dependencies]
-tools-base = { path = "../tools-base" }
 tree-sitter = "0.26"
 tree-sitter-move-on-aptos = { git = "https://github.com/aptos-labs/tree-sitter-move-on-aptos", rev = "12906b341de7cef81cf03d7d91dae51d8a9299e7" }
+walkdir = "2"
 
-[dev-dependencies]
-tempfile = "3"
+[features]
+default = []
+parallel = ["rayon"]
+
+[target.'cfg(any(unix, windows))'.dependencies]
+rayon = { version = "1", optional = true }
