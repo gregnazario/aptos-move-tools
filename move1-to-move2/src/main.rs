@@ -2,6 +2,8 @@ use std::env;
 use std::fs;
 use std::process;
 
+use tools_base::{IntoEdit, apply_edits, new_move_parser};
+
 #[derive(Debug)]
 struct Edit {
     start_byte: usize,
@@ -10,23 +12,24 @@ struct Edit {
     rule: &'static str,
 }
 
-fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
-    edits.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
-    let mut result = source.to_string();
-    for edit in &edits {
-        result.replace_range(edit.start_byte..edit.end_byte, &edit.replacement);
+impl IntoEdit for Edit {
+    fn start_byte(&self) -> usize {
+        self.start_byte
     }
-    result
+    fn end_byte(&self) -> usize {
+        self.end_byte
+    }
+    fn replacement(&self) -> &str {
+        &self.replacement
+    }
 }
 
 /// Check if a node is the object of a dot_expression (i.e., followed by .field).
 fn is_dot_object(node: tree_sitter::Node) -> bool {
-    if let Some(parent) = node.parent() {
-        if parent.kind() == "dot_expression" {
-            return parent
-                .child_by_field_name("object")
-                .map(|o| o.id()) == Some(node.id());
-        }
+    if let Some(parent) = node.parent()
+        && parent.kind() == "dot_expression"
+    {
+        return parent.child_by_field_name("object").map(|o| o.id()) == Some(node.id());
     }
     false
 }
@@ -381,14 +384,10 @@ fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
 
     // Only strip in contexts where the cast stands alone
     let parent = node.parent()?;
-    let safe = match parent.kind() {
-        "arg_list" => true,
-        "let_expression" => true,
-        "assign_expression" => true,
-        "block" => true,
-        "return_expression" => true,
-        _ => false,
-    };
+    let safe = matches!(
+        parent.kind(),
+        "arg_list" | "let_expression" | "assign_expression" | "block" | "return_expression"
+    );
     if !safe {
         return None;
     }
@@ -404,10 +403,8 @@ fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
 
 /// Check if an identifier appears anywhere in a subtree.
 fn contains_identifier(node: tree_sitter::Node, source: &[u8], name: &str) -> bool {
-    if node.kind() == "identifier" {
-        if node.utf8_text(source).ok() == Some(name) {
-            return true;
-        }
+    if node.kind() == "identifier" && node.utf8_text(source).ok() == Some(name) {
+        return true;
     }
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
@@ -639,10 +636,10 @@ fn try_while_to_for_edits(node: tree_sitter::Node, source: &[u8]) -> Option<Vec<
 
 /// Strip the & or &mut prefix from a borrow_global replacement string.
 fn strip_borrow_prefix(s: &str) -> String {
-    if s.starts_with("&mut ") {
-        s[5..].to_string()
-    } else if s.starts_with('&') {
-        s[1..].to_string()
+    if let Some(stripped) = s.strip_prefix("&mut ") {
+        stripped.to_string()
+    } else if let Some(stripped) = s.strip_prefix('&') {
+        stripped.to_string()
     } else {
         s.to_string()
     }
@@ -651,53 +648,51 @@ fn strip_borrow_prefix(s: &str) -> String {
 fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) {
     // *borrow_global<T>(addr) → T[addr]  (deref cancels the &)
     // *vector::borrow(&v, i) → v[i]  (deref cancels the &)
-    if node.kind() == "dereference_expression" {
-        if let Some(inner) = node.named_child(0) {
-            if inner.kind() == "call_expression" {
-                if let Some(edit) = try_borrow_global_edit(inner, source) {
-                    edits.push(Edit {
-                        start_byte: node.start_byte(),
-                        end_byte: node.end_byte(),
-                        replacement: strip_borrow_prefix(&edit.replacement),
-                        rule: "deref_borrow_global",
-                    });
-                    return;
-                }
-                if let Some(edit) = try_vector_borrow_edit(inner, source) {
-                    edits.push(Edit {
-                        start_byte: node.start_byte(),
-                        end_byte: node.end_byte(),
-                        replacement: strip_borrow_prefix(&edit.replacement),
-                        rule: "deref_vector_borrow",
-                    });
-                    return;
-                }
-            }
+    if node.kind() == "dereference_expression"
+        && let Some(inner) = node.named_child(0)
+        && inner.kind() == "call_expression"
+    {
+        if let Some(edit) = try_borrow_global_edit(inner, source) {
+            edits.push(Edit {
+                start_byte: node.start_byte(),
+                end_byte: node.end_byte(),
+                replacement: strip_borrow_prefix(&edit.replacement),
+                rule: "deref_borrow_global",
+            });
+            return;
+        }
+        if let Some(edit) = try_vector_borrow_edit(inner, source) {
+            edits.push(Edit {
+                start_byte: node.start_byte(),
+                end_byte: node.end_byte(),
+                replacement: strip_borrow_prefix(&edit.replacement),
+                rule: "deref_vector_borrow",
+            });
+            return;
         }
     }
 
     // &borrow_global<T>(addr) → &T[addr]  (absorb redundant outer &)
     // &vector::borrow(&v, i) → &v[i]  (absorb redundant outer &)
-    if node.kind() == "borrow_expression" {
-        if let Some(inner) = node.named_child(0) {
-            if inner.kind() == "call_expression" {
-                if let Some(edit) = try_borrow_global_edit(inner, source) {
-                    edits.push(Edit {
-                        start_byte: node.start_byte(),
-                        end_byte: node.end_byte(),
-                        ..edit
-                    });
-                    return;
-                }
-                if let Some(edit) = try_vector_borrow_edit(inner, source) {
-                    edits.push(Edit {
-                        start_byte: node.start_byte(),
-                        end_byte: node.end_byte(),
-                        ..edit
-                    });
-                    return;
-                }
-            }
+    if node.kind() == "borrow_expression"
+        && let Some(inner) = node.named_child(0)
+        && inner.kind() == "call_expression"
+    {
+        if let Some(edit) = try_borrow_global_edit(inner, source) {
+            edits.push(Edit {
+                start_byte: node.start_byte(),
+                end_byte: node.end_byte(),
+                ..edit
+            });
+            return;
+        }
+        if let Some(edit) = try_vector_borrow_edit(inner, source) {
+            edits.push(Edit {
+                start_byte: node.start_byte(),
+                end_byte: node.end_byte(),
+                ..edit
+            });
+            return;
         }
     }
 
@@ -721,35 +716,35 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
     }
 
     // vector::empty<T>() → vector<T>[]
-    if node.kind() == "call_expression" {
-        if let Some(edit) = try_vector_empty_edit(node, source) {
-            edits.push(edit);
-            return;
-        }
+    if node.kind() == "call_expression"
+        && let Some(edit) = try_vector_empty_edit(node, source)
+    {
+        edits.push(edit);
+        return;
     }
 
     // module::func(obj, ...) → obj.func(...)  (receiver-style stdlib calls)
-    if node.kind() == "call_expression" {
-        if let Some(edit) = try_receiver_style_edit(node, source) {
-            edits.push(edit);
-            return;
-        }
+    if node.kind() == "call_expression"
+        && let Some(edit) = try_receiver_style_edit(node, source)
+    {
+        edits.push(edit);
+        return;
     }
 
     // (x as u64) → x as u64  (redundant cast parens)
-    if node.kind() == "parenthesized_expression" {
-        if let Some(edit) = try_cast_paren_edit(node, source) {
-            edits.push(edit);
-            return;
-        }
+    if node.kind() == "parenthesized_expression"
+        && let Some(edit) = try_cast_paren_edit(node, source)
+    {
+        edits.push(edit);
+        return;
     }
 
     // x = x + y → x += y  (and other compound assignment patterns)
-    if node.kind() == "assign_expression" {
-        if let Some(edit) = try_compound_assign_edit(node, source) {
-            edits.push(edit);
-            return;
-        }
+    if node.kind() == "assign_expression"
+        && let Some(edit) = try_compound_assign_edit(node, source)
+    {
+        edits.push(edit);
+        return;
     }
 
     // Strip acquires annotations
@@ -769,11 +764,11 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
     }
 
     // let i = 0; while (i < len) { ...; i = i + 1; } → for (i in 0..len) { ... }
-    if node.kind() == "while_expression" {
-        if let Some(for_edits) = try_while_to_for_edits(node, source) {
-            edits.extend(for_edits);
-            return;
-        }
+    if node.kind() == "while_expression"
+        && let Some(for_edits) = try_while_to_for_edits(node, source)
+    {
+        edits.extend(for_edits);
+        return;
     }
 
     // public(friend) → friend, public(package) → package
@@ -813,11 +808,7 @@ fn main() {
         process::exit(1);
     }
 
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&tree_sitter_move_on_aptos::language())
-        .expect("Error loading Move grammar");
-
+    let mut parser = new_move_parser();
     let mut total_edits = 0;
     let mut files_modified = 0;
 

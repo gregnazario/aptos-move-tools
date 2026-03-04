@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use flate2::read::GzDecoder;
+use tools_base::{new_move_parser, node_text};
 use walkdir::WalkDir;
 
 // ─── Move.toml Parsing ─────────────────────────────────────────
@@ -35,11 +36,52 @@ fn parse_move_toml(path: &Path) -> BTreeMap<String, String> {
 // ─── Source Scanning (tree-sitter) ──────────────────────────────
 
 const KEYWORD_BUILTINS: &[&str] = &[
-    "vector", "exists", "for", "match", "Self", "self", "true", "false", "abort", "return",
-    "break", "continue", "if", "else", "while", "loop", "let", "mut", "copy", "move", "has",
-    "fun", "struct", "module", "use", "public", "friend", "native", "const", "spec", "schema",
-    "include", "apply", "pragma", "global", "local", "assert", "assume", "ensures", "requires",
-    "invariant", "modifies", "acquires", "entry", "inline", "enum",
+    "vector",
+    "exists",
+    "for",
+    "match",
+    "Self",
+    "self",
+    "true",
+    "false",
+    "abort",
+    "return",
+    "break",
+    "continue",
+    "if",
+    "else",
+    "while",
+    "loop",
+    "let",
+    "mut",
+    "copy",
+    "move",
+    "has",
+    "fun",
+    "struct",
+    "module",
+    "use",
+    "public",
+    "friend",
+    "native",
+    "const",
+    "spec",
+    "schema",
+    "include",
+    "apply",
+    "pragma",
+    "global",
+    "local",
+    "assert",
+    "assume",
+    "ensures",
+    "requires",
+    "invariant",
+    "modifies",
+    "acquires",
+    "entry",
+    "inline",
+    "enum",
 ];
 
 /// Returns a map of named_address → set of module names used with it.
@@ -66,9 +108,10 @@ fn walk_tree(
     match node.kind() {
         // module_identity: address::module (in use statements and module declarations)
         "module_identity" => {
-            if let (Some(addr_node), Some(mod_node)) =
-                (node.child_by_field_name("address"), node.child_by_field_name("module"))
-            {
+            if let (Some(addr_node), Some(mod_node)) = (
+                node.child_by_field_name("address"),
+                node.child_by_field_name("module"),
+            ) {
                 if addr_node.kind() == "identifier" {
                     let addr_name = node_text(addr_node, source);
                     let mod_name = node_text(mod_node, source);
@@ -133,7 +176,10 @@ fn handle_name_access_chain(
     // Look for pattern: identifier "::" identifier
     if children.len() >= 3 {
         let first = children[0];
-        if first.kind() == "identifier" && children.len() >= 3 && node_text(children[1], source) == "::" {
+        if first.kind() == "identifier"
+            && children.len() >= 3
+            && node_text(children[1], source) == "::"
+        {
             let addr_name = node_text(first, source);
             let mod_name = node_text(children[2], source);
             if !is_keyword(&addr_name) {
@@ -168,19 +214,15 @@ fn collect_modules_in_address_block(
     }
 }
 
-fn node_text(node: tree_sitter::Node, source: &[u8]) -> String {
-    node.utf8_text(source).unwrap_or("").to_string()
-}
-
 fn is_keyword(name: &str) -> bool {
     KEYWORD_BUILTINS.contains(&name)
 }
 
 // ─── Bytecode Scanning ─────────────────────────────────────────
 
+use move_binary_format::CompiledModule;
 use move_binary_format::access::ModuleAccess;
 use move_binary_format::internals::ModuleIndex;
-use move_binary_format::CompiledModule;
 
 /// Returns (hex_address, module_name) pairs from a compiled .mv file.
 fn scan_bytecode_addresses(bytes: &[u8]) -> Vec<(String, String)> {
@@ -245,7 +287,9 @@ fn resolve_addresses(
     // Build reverse index: module_name → hex_address (from bytecode)
     let mut module_to_hex: HashMap<String, String> = HashMap::new();
     for (hex, mod_name) in bytecode_pairs {
-        module_to_hex.entry(mod_name.clone()).or_insert_with(|| hex.clone());
+        module_to_hex
+            .entry(mod_name.clone())
+            .or_insert_with(|| hex.clone());
     }
 
     // Priority 2: Module-name matching
@@ -576,14 +620,22 @@ fn main() {
             "--verbose" => verbose = true,
             "--help" | "-h" => {
                 eprintln!("Usage: named-address-recover <path> [--toml] [--verbose]");
-                eprintln!("       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]");
+                eprintln!(
+                    "       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]"
+                );
                 eprintln!();
-                eprintln!("Recovers named address mappings from a Move package by cross-referencing");
+                eprintln!(
+                    "Recovers named address mappings from a Move package by cross-referencing"
+                );
                 eprintln!("Move.toml, source files, and compiled bytecode.");
                 eprintln!();
                 eprintln!("Options:");
-                eprintln!("  --address 0xHEX  Fetch modules from Aptos mainnet instead of local path");
-                eprintln!("  --source <path>  Supplement with local .move source files (use with --address)");
+                eprintln!(
+                    "  --address 0xHEX  Fetch modules from Aptos mainnet instead of local path"
+                );
+                eprintln!(
+                    "  --source <path>  Supplement with local .move source files (use with --address)"
+                );
                 eprintln!("  --toml           Output as [addresses] TOML section");
                 eprintln!("  --verbose        Show source attribution for each mapping");
                 process::exit(0);
@@ -616,10 +668,7 @@ fn main() {
     let mut all_source_addrs: HashMap<String, BTreeSet<String>> = HashMap::new();
     let mut all_bytecode_pairs: Vec<(String, String)> = Vec::new();
 
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&tree_sitter_move_on_aptos::language())
-        .expect("Error loading Move grammar");
+    let mut parser = new_move_parser();
 
     if let Some(addr) = address {
         // ─── On-chain mode ──────────────────────────────────────
@@ -665,7 +714,10 @@ fn main() {
                     }
                 }
             }
-            eprintln!("Scanned {} local source file(s) from {}", local_count, src_path);
+            eprintln!(
+                "Scanned {} local source file(s) from {}",
+                local_count, src_path
+            );
         }
 
         // No Move.toml in on-chain mode
@@ -682,7 +734,10 @@ fn main() {
             );
         }
         if !all_bytecode_pairs.is_empty() {
-            eprintln!("Bytecode address/module pairs: {}", all_bytecode_pairs.len());
+            eprintln!(
+                "Bytecode address/module pairs: {}",
+                all_bytecode_pairs.len()
+            );
         }
     } else {
         // ─── Local mode ─────────────────────────────────────────
@@ -690,7 +745,9 @@ fn main() {
             Some(p) => PathBuf::from(p),
             None => {
                 eprintln!("Usage: named-address-recover <path> [--toml] [--verbose]");
-                eprintln!("       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]");
+                eprintln!(
+                    "       named-address-recover --address 0xHEX [--source <path>] [--toml] [--verbose]"
+                );
                 process::exit(2);
             }
         };
@@ -716,11 +773,7 @@ fn main() {
         if !toml_addrs.is_empty() {
             eprintln!(
                 "Move.toml addresses: {}",
-                toml_addrs
-                    .keys()
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .join(", ")
+                toml_addrs.keys().cloned().collect::<Vec<_>>().join(", ")
             );
         }
 

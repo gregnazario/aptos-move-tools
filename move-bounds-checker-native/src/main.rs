@@ -80,10 +80,7 @@ fn line_col(source: &str, byte_offset: u32) -> (usize, usize) {
     }
     let prefix = &source[..offset];
     let line = prefix.matches('\n').count() + 1;
-    let col = prefix
-        .rfind('\n')
-        .map(|i| offset - i)
-        .unwrap_or(offset + 1);
+    let col = prefix.rfind('\n').map(|i| offset - i).unwrap_or(offset + 1);
     (line, col)
 }
 
@@ -287,8 +284,14 @@ fn count_lets_recursive(exp: &Exp, count: &mut usize) {
 /// Visit direct child expressions of an Exp_ node (non-recursive).
 fn visit_child_exps<F: FnMut(&Exp)>(exp: &Exp_, f: &mut F) {
     match exp {
-        Exp_::Value(_) | Exp_::Move(_) | Exp_::Copy(_) | Exp_::Break(_) | Exp_::Continue(_)
-        | Exp_::Unit | Exp_::UnresolvedError | Exp_::Spec(_) => {}
+        Exp_::Value(_)
+        | Exp_::Move(_)
+        | Exp_::Copy(_)
+        | Exp_::Break(_)
+        | Exp_::Continue(_)
+        | Exp_::Unit
+        | Exp_::UnresolvedError
+        | Exp_::Spec(_) => {}
         Exp_::Name(_, tys_opt) => {
             // No child expressions, type args only
             let _ = tys_opt;
@@ -370,9 +373,14 @@ fn visit_child_exps<F: FnMut(&Exp)>(exp: &Exp_, f: &mut F) {
             f(lhs);
             f(rhs);
         }
-        Exp_::Return(Some(e)) | Exp_::Abort(e) | Exp_::Dereference(e)
-        | Exp_::UnaryExp(_, e) | Exp_::Borrow(_, e) | Exp_::Dot(e, _)
-        | Exp_::Cast(e, _) | Exp_::Annotate(e, _) => {
+        Exp_::Return(Some(e))
+        | Exp_::Abort(e)
+        | Exp_::Dereference(e)
+        | Exp_::UnaryExp(_, e)
+        | Exp_::Borrow(_, e)
+        | Exp_::Dot(e, _)
+        | Exp_::Cast(e, _)
+        | Exp_::Annotate(e, _) => {
             f(e);
         }
         Exp_::Return(None) => {}
@@ -395,7 +403,10 @@ fn visit_child_exps<F: FnMut(&Exp)>(exp: &Exp_, f: &mut F) {
     }
 }
 
-fn visit_sequence_exps<F: FnMut(&Exp)>(seq: &legacy_move_compiler::parser::ast::Sequence, f: &mut F) {
+fn visit_sequence_exps<F: FnMut(&Exp)>(
+    seq: &legacy_move_compiler::parser::ast::Sequence,
+    f: &mut F,
+) {
     for item in &seq.1 {
         match &item.value {
             SequenceItem_::Seq(e) => f(e),
@@ -458,11 +469,7 @@ fn visit_types_in_exp_shallow<F: FnMut(&Type)>(exp: &Exp_, f: &mut F) {
 
 // ─── Main Check Logic ──────────────────────────────────────────
 
-fn check_definitions(
-    defs: &[Definition],
-    source: &str,
-    config: &BoundsConfig,
-) -> Vec<Violation> {
+fn check_definitions(defs: &[Definition], source: &str, config: &BoundsConfig) -> Vec<Violation> {
     let mut violations = Vec::new();
     for def in defs {
         match def {
@@ -925,9 +932,10 @@ fn fetch_labels_from_github() -> (HashMap<String, String>, HashMap<String, Strin
     parse_labels(&body)
 }
 
-fn load_labels_from_local(explorer_path: &str) -> (HashMap<String, String>, HashMap<String, String>) {
-    let label_file = PathBuf::from(explorer_path)
-        .join("app/data/mainnet/knownAddresses.ts");
+fn load_labels_from_local(
+    explorer_path: &str,
+) -> (HashMap<String, String>, HashMap<String, String>) {
+    let label_file = PathBuf::from(explorer_path).join("app/data/mainnet/knownAddresses.ts");
 
     match fs::read_to_string(&label_file) {
         Ok(content) => parse_labels(&content),
@@ -1009,8 +1017,14 @@ fn print_identify_report(
     // Sort labeled by violation count descending
     labeled_addrs.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
     scam_addrs.sort_by(|a, b| {
-        let la = scam.get(&a.0.to_lowercase()).map(|s| s.as_str()).unwrap_or("");
-        let lb = scam.get(&b.0.to_lowercase()).map(|s| s.as_str()).unwrap_or("");
+        let la = scam
+            .get(&a.0.to_lowercase())
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        let lb = scam
+            .get(&b.0.to_lowercase())
+            .map(|s| s.as_str())
+            .unwrap_or("");
         la.cmp(lb)
     });
     unlabeled_addrs.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
@@ -1033,14 +1047,23 @@ fn print_identify_report(
         println!("  \u{26a0} SCAM-FLAGGED ADDRESSES");
         println!("{}", "\u{2500}".repeat(72));
         for (addr, vs) in &scam_addrs {
-            let label = scam.get(&addr.to_lowercase()).map(|s| s.as_str()).unwrap_or("Unknown Scam");
+            let label = scam
+                .get(&addr.to_lowercase())
+                .map(|s| s.as_str())
+                .unwrap_or("Unknown Scam");
             println!();
             println!("  [{}] {}", label, addr);
             println!("  {} violation(s):", vs.len());
             for v in *vs {
                 println!(
                     "    {}:{} \u{2014} {} '{}' exceeds {} ({} > {})",
-                    v.source_file, v.line, v.entity_kind, v.entity, v.violation_kind, v.actual, v.limit
+                    v.source_file,
+                    v.line,
+                    v.entity_kind,
+                    v.entity,
+                    v.violation_kind,
+                    v.actual,
+                    v.limit
                 );
             }
         }
@@ -1054,7 +1077,10 @@ fn print_identify_report(
         println!("{}", "\u{2500}".repeat(72));
 
         for (addr, vs) in &labeled_addrs {
-            let label = known.get(&addr.to_lowercase()).map(|s| s.as_str()).unwrap_or("Unknown");
+            let label = known
+                .get(&addr.to_lowercase())
+                .map(|s| s.as_str())
+                .unwrap_or("Unknown");
             println!();
             println!("  {}", label);
             println!("  {}", addr);
@@ -1065,13 +1091,26 @@ fn print_identify_report(
             }
             let mut sorted_kinds: Vec<_> = kind_counts.iter().collect();
             sorted_kinds.sort_by_key(|(k, _)| *k);
-            let summary: Vec<String> = sorted_kinds.iter().map(|(k, c)| format!("{}: {}", k, c)).collect();
-            println!("  {} violation(s) \u{2014} {}", vs.len(), summary.join(", "));
+            let summary: Vec<String> = sorted_kinds
+                .iter()
+                .map(|(k, c)| format!("{}: {}", k, c))
+                .collect();
+            println!(
+                "  {} violation(s) \u{2014} {}",
+                vs.len(),
+                summary.join(", ")
+            );
 
             for v in *vs {
                 println!(
                     "    {}:{} \u{2014} {} '{}' exceeds {} ({} > {})",
-                    v.source_file, v.line, v.entity_kind, v.entity, v.violation_kind, v.actual, v.limit
+                    v.source_file,
+                    v.line,
+                    v.entity_kind,
+                    v.entity,
+                    v.violation_kind,
+                    v.actual,
+                    v.limit
                 );
             }
         }
@@ -1084,16 +1123,31 @@ fn print_identify_report(
         println!("  SUMMARY: LABELED ADDRESSES");
         println!("{}", "\u{2500}".repeat(72));
         println!();
-        println!("  {:<30} {:>10}  {:<25}", "Label", "Violations", "Top Issue");
-        println!("  {} {}  {}", "\u{2500}".repeat(30), "\u{2500}".repeat(10), "\u{2500}".repeat(25));
+        println!(
+            "  {:<30} {:>10}  {:<25}",
+            "Label", "Violations", "Top Issue"
+        );
+        println!(
+            "  {} {}  {}",
+            "\u{2500}".repeat(30),
+            "\u{2500}".repeat(10),
+            "\u{2500}".repeat(25)
+        );
 
         for (addr, vs) in &labeled_addrs {
-            let label = known.get(&addr.to_lowercase()).map(|s| s.as_str()).unwrap_or("Unknown");
+            let label = known
+                .get(&addr.to_lowercase())
+                .map(|s| s.as_str())
+                .unwrap_or("Unknown");
             let mut kind_counts: HashMap<&str, usize> = HashMap::new();
             for v in *vs {
                 *kind_counts.entry(v.violation_kind).or_insert(0) += 1;
             }
-            let top_kind = kind_counts.iter().max_by_key(|(_, c)| **c).map(|(k, _)| *k).unwrap_or("");
+            let top_kind = kind_counts
+                .iter()
+                .max_by_key(|(_, c)| **c)
+                .map(|(k, _)| *k)
+                .unwrap_or("");
             println!("  {:<30} {:>10}  {:<25}", label, vs.len(), top_kind);
         }
     }
@@ -1120,12 +1174,25 @@ fn print_identify_report(
             }
             let mut sorted_kinds: Vec<_> = kind_counts.iter().collect();
             sorted_kinds.sort_by_key(|(k, _)| *k);
-            let summary: Vec<String> = sorted_kinds.iter().map(|(k, c)| format!("{}: {}", k, c)).collect();
-            println!("  {} violation(s) \u{2014} {}", vs.len(), summary.join(", "));
+            let summary: Vec<String> = sorted_kinds
+                .iter()
+                .map(|(k, c)| format!("{}: {}", k, c))
+                .collect();
+            println!(
+                "  {} violation(s) \u{2014} {}",
+                vs.len(),
+                summary.join(", ")
+            );
             for v in *vs {
                 println!(
                     "    {}:{} \u{2014} {} '{}' exceeds {} ({} > {})",
-                    v.source_file, v.line, v.entity_kind, v.entity, v.violation_kind, v.actual, v.limit
+                    v.source_file,
+                    v.line,
+                    v.entity_kind,
+                    v.entity,
+                    v.violation_kind,
+                    v.actual,
+                    v.limit
                 );
             }
             println!();
@@ -1167,9 +1234,7 @@ fn parse_override(arg: &str, config: &mut BoundsConfig) -> bool {
             c.max_struct_definitions = v
         }),
         ("--max-struct-variants=", |c, v| c.max_struct_variants = v),
-        ("--max-fields-in-struct=", |c, v| {
-            c.max_fields_in_struct = v
-        }),
+        ("--max-fields-in-struct=", |c, v| c.max_fields_in_struct = v),
         ("--max-function-definitions=", |c, v| {
             c.max_function_definitions = v
         }),
@@ -1234,7 +1299,9 @@ fn main() {
     }
 
     if paths.is_empty() {
-        eprintln!("Usage: move-bounds-checker-native <dir> [--identify] [--all] [--explorer-local=PATH] [--max-loop-depth=N ...]");
+        eprintln!(
+            "Usage: move-bounds-checker-native <dir> [--identify] [--all] [--explorer-local=PATH] [--max-loop-depth=N ...]"
+        );
         process::exit(2);
     }
 
@@ -1247,11 +1314,7 @@ fn main() {
                 WalkDir::new(&path)
                     .into_iter()
                     .filter_map(|e| e.ok())
-                    .filter(|e| {
-                        e.path()
-                            .extension()
-                            .is_some_and(|ext| ext == "move")
-                    })
+                    .filter(|e| e.path().extension().is_some_and(|ext| ext == "move"))
                     .map(|e| e.path().to_path_buf())
                     .collect::<Vec<_>>()
             } else {

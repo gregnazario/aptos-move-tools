@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-lint-test:
+    name: ${{ matrix.os }} / ${{ matrix.tool }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        tool:
+          - tools-base
+          - move-suggest
+          - move-bounds-checker
+          - move1-to-move2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build ${{ matrix.tool }}
+        run: cargo build --manifest-path ${{ matrix.tool }}/Cargo.toml
+
+      - name: Lint ${{ matrix.tool }}
+        run: cargo clippy --manifest-path ${{ matrix.tool }}/Cargo.toml -- -D warnings
+
+      - name: Format check ${{ matrix.tool }}
+        run: cargo fmt --manifest-path ${{ matrix.tool }}/Cargo.toml -- --check
+
+      - name: Test ${{ matrix.tool }}
+        run: cargo test --manifest-path ${{ matrix.tool }}/Cargo.toml

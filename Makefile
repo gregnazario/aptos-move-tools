@@ -1,8 +1,31 @@
-TOOLS := move-suggest move-bounds-checker move-bounds-checker-native move1-to-move2 named-address-recover
+TOOLS := tools-base move-suggest move-bounds-checker move-bounds-checker-native move1-to-move2 named-address-recover
+# Tools that build without aptos-core path deps (for CI)
+CI_TOOLS := tools-base move-suggest move-bounds-checker move1-to-move2
 
-.PHONY: all build release fmt lint clippy check test clean
+.PHONY: all build release fmt fmt-check lint clippy check test clean ci build-ci lint-ci test-ci
 
 all: build
+
+ci: build-ci lint-ci test-ci
+
+build-ci:
+	@for tool in $(CI_TOOLS); do \
+		echo "Building $$tool..."; \
+		cargo build --manifest-path $$tool/Cargo.toml; \
+	done
+
+lint-ci:
+	@for tool in $(CI_TOOLS); do \
+		echo "Linting $$tool..."; \
+		cargo clippy --manifest-path $$tool/Cargo.toml -- -D warnings; \
+		cargo fmt --manifest-path $$tool/Cargo.toml -- --check; \
+	done
+
+test-ci:
+	@for tool in $(CI_TOOLS); do \
+		echo "Testing $$tool..."; \
+		cargo test --manifest-path $$tool/Cargo.toml; \
+	done
 
 build:
 	@for tool in $(TOOLS); do \

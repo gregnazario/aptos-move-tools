@@ -1,3 +1,4 @@
+use tools_base::IntoEdit;
 use tree_sitter::Node;
 
 #[derive(Debug)]
@@ -9,22 +10,26 @@ pub struct Suggestion {
     pub message: String,
 }
 
-/// Apply suggestions back-to-front to preserve byte offsets.
-pub fn apply_suggestions(source: &str, mut suggestions: Vec<Suggestion>) -> String {
-    suggestions.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
-    let mut result = source.to_string();
-    for s in &suggestions {
-        result.replace_range(s.start_byte..s.end_byte, &s.replacement);
+impl IntoEdit for Suggestion {
+    fn start_byte(&self) -> usize {
+        self.start_byte
     }
-    result
+    fn end_byte(&self) -> usize {
+        self.end_byte
+    }
+    fn replacement(&self) -> &str {
+        &self.replacement
+    }
+}
+
+/// Apply suggestions back-to-front to preserve byte offsets.
+pub fn apply_suggestions(source: &str, suggestions: Vec<Suggestion>) -> String {
+    tools_base::apply_edits(source, suggestions)
 }
 
 /// Compute 1-based line and column from a byte offset.
 pub fn line_col(source: &str, byte_offset: usize) -> (usize, usize) {
-    let prefix = &source[..byte_offset];
-    let line = prefix.matches('\n').count() + 1;
-    let col = prefix.rfind('\n').map(|i| byte_offset - i).unwrap_or(byte_offset + 1);
-    (line, col)
+    tools_base::line_col(source, byte_offset)
 }
 
 /// Parse a `name_access_chain` node into (module, member).
