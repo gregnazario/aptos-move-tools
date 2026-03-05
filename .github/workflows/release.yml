@@ -39,11 +39,11 @@ jobs:
             zigbuild: true
             archive: tar.gz
           - target: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-latest
             zigbuild: false
             archive: tar.gz
           - target: aarch64-apple-darwin
-            runner: macos-14
+            runner: macos-latest
             zigbuild: false
             archive: tar.gz
           - target: x86_64-pc-windows-msvc
@@ -66,6 +66,8 @@ jobs:
       - name: Install Zig
         if: matrix.zigbuild
         uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
 
       - name: Install cargo-zigbuild
         if: matrix.zigbuild
