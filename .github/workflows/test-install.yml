@@ -1,0 +1,114 @@
+name: Test Install Scripts
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "install.sh"
+      - "install.ps1"
+      - ".github/workflows/test-install.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "install.sh"
+      - "install.ps1"
+      - ".github/workflows/test-install.yml"
+
+jobs:
+  test-unix:
+    name: install.sh / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test install (latest, auto-detect)
+        run: |
+          sh install.sh --install-dir "$RUNNER_TEMP/aptos-bin"
+          # Verify all 3 binaries exist and are executable
+          test -x "$RUNNER_TEMP/aptos-bin/move-suggest"
+          test -x "$RUNNER_TEMP/aptos-bin/move-bounds-checker"
+          test -x "$RUNNER_TEMP/aptos-bin/move1-to-move2"
+          # Verify binaries actually run
+          "$RUNNER_TEMP/aptos-bin/move-suggest" --help
+
+      - name: Test install (specific version)
+        run: |
+          sh install.sh --version v0.0.1 --install-dir "$RUNNER_TEMP/aptos-bin2"
+          test -x "$RUNNER_TEMP/aptos-bin2/move-suggest"
+
+      - name: Test install (target override)
+        run: |
+          sh install.sh --version v0.0.1 --target x86_64-unknown-linux-gnu --install-dir "$RUNNER_TEMP/aptos-bin3"
+          test -x "$RUNNER_TEMP/aptos-bin3/move-suggest"
+        if: runner.os == 'Linux'
+
+      - name: Test install (target override - macOS x86_64)
+        run: |
+          sh install.sh --version v0.0.1 --target x86_64-apple-darwin --install-dir "$RUNNER_TEMP/aptos-bin3"
+          test -x "$RUNNER_TEMP/aptos-bin3/move-suggest"
+        if: runner.os == 'macOS'
+
+      - name: Test help flag
+        run: sh install.sh --help
+
+      - name: Test bad version fails gracefully
+        run: |
+          if sh install.sh --version v999.0.0 --install-dir "$RUNNER_TEMP/aptos-bad" 2>&1; then
+            echo "Expected failure but got success"
+            exit 1
+          fi
+          echo "Correctly failed on bad version"
+
+      - name: Test PATH warning appears
+        run: |
+          output="$(sh install.sh --version v0.0.1 --install-dir "$RUNNER_TEMP/aptos-path-test" 2>&1)"
+          echo "$output"
+          echo "$output" | grep -q "export PATH"
+          echo "PATH warning correctly shown"
+
+  test-windows:
+    name: install.ps1 / windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test install (latest, auto-detect)
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "aptos-bin"
+          .\install.ps1 -InstallDir $installDir
+          # Verify all 3 binaries exist
+          if (-not (Test-Path (Join-Path $installDir "move-suggest.exe"))) { throw "move-suggest.exe not found" }
+          if (-not (Test-Path (Join-Path $installDir "move-bounds-checker.exe"))) { throw "move-bounds-checker.exe not found" }
+          if (-not (Test-Path (Join-Path $installDir "move1-to-move2.exe"))) { throw "move1-to-move2.exe not found" }
+          # Verify binary actually runs
+          & (Join-Path $installDir "move-suggest.exe") --help
+
+      - name: Test install (specific version)
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "aptos-bin2"
+          .\install.ps1 -Version v0.0.1 -InstallDir $installDir
+          if (-not (Test-Path (Join-Path $installDir "move-suggest.exe"))) { throw "move-suggest.exe not found" }
+
+      - name: Test bad version fails gracefully
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "aptos-bad"
+          $failed = $false
+          try {
+              .\install.ps1 -Version v999.0.0 -InstallDir $installDir
+          } catch {
+              $failed = $true
+          }
+          # Also check exit code from non-terminating errors
+          if (-not $failed -and (Test-Path (Join-Path $installDir "move-suggest.exe"))) {
+              throw "Expected failure but got success"
+          }
+          Write-Host "Correctly failed on bad version"
