@@ -50,6 +50,10 @@ jobs:
             runner: windows-latest
             zigbuild: false
             archive: zip
+          - target: aarch64-pc-windows-msvc
+            runner: windows-latest
+            zigbuild: false
+            archive: zip
 
     env:
       CARGO_TARGET_DIR: target-shared
