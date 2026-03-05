@@ -6,7 +6,7 @@ ALL_TOOLS := $(TOOLS) $(APTOS_TOOLS)
 BIN_TOOLS := $(filter-out tools-base,$(TOOLS))
 DIST_DIR := dist
 
-.PHONY: all build build-all release fmt fmt-check lint clippy check test clean ci help package
+.PHONY: all build build-all release fmt fmt-check lint clippy check test clean clean-all ci help package
 
 all: build
 
@@ -19,7 +19,8 @@ help:
 	@echo "  release     Build all tools in release mode"
 	@echo "  check       Type-check all tools without building"
 	@echo "  package     Build release binaries and zip them up"
-	@echo "  clean       Remove build artifacts for all tools"
+	@echo "  clean       Remove build artifacts for CI tools"
+	@echo "  clean-all   Remove build artifacts for all tools (needs aptos-core)"
 	@echo ""
 	@echo "Quality:"
 	@echo "  lint        Run clippy and format check"
@@ -97,6 +98,13 @@ package: release
 	@echo "Packaged to aptos-move-tools.zip"
 
 clean:
+	@for tool in $(TOOLS); do \
+		echo "Cleaning $$tool..."; \
+		cargo clean --manifest-path $$tool/Cargo.toml; \
+	done
+	@rm -rf $(DIST_DIR) aptos-move-tools.zip
+
+clean-all:
 	@for tool in $(ALL_TOOLS); do \
 		echo "Cleaning $$tool..."; \
 		cargo clean --manifest-path $$tool/Cargo.toml; \
