@@ -222,7 +222,6 @@ Options:
 // ── Transaction Types ───────────────────────────────────────────
 
 #[derive(Debug, Deserialize, Clone)]
-#[allow(dead_code)]
 struct Transaction {
     #[serde(rename = "type", default)]
     tx_type: String,
@@ -240,8 +239,6 @@ struct Transaction {
     gas_unit_price: String,
     #[serde(default)]
     success: bool,
-    #[serde(default)]
-    vm_status: String,
 }
 
 // ── API Client ──────────────────────────────────────────────────
@@ -252,8 +249,9 @@ fn api_get(url: &str) -> Result<String, String> {
             Ok(body) => Ok(body),
             Err(e) => Err(format!("Failed to read response body: {}", e)),
         },
-        Err(_) => {
+        Err(first_err) => {
             // Retry once after 2s backoff
+            eprintln!("Request failed ({}), retrying in 2s...", first_err);
             thread::sleep(Duration::from_secs(2));
             match ureq::get(url).call() {
                 Ok(response) => match response.into_body().read_to_string() {
@@ -293,6 +291,16 @@ fn fetch_transaction_by_hash(base_url: &str, hash: &str) -> Result<Transaction, 
     let url = format!("{}/transactions/by_hash/{}", base_url, hash);
     let body = api_get(&url)?;
     serde_json::from_str(&body).map_err(|e| format!("Failed to parse transaction: {}", e))
+}
+
+fn fetch_latest_version(base_url: &str) -> Result<u64, String> {
+    let body = api_get(base_url)?;
+    let v: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| format!("Failed to parse ledger info: {}", e))?;
+    v["ledger_version"]
+        .as_str()
+        .and_then(|s| s.parse::<u64>().ok())
+        .ok_or_else(|| "Missing ledger_version in response".to_string())
 }
 
 // ── Gas Analysis ────────────────────────────────────────────────
@@ -397,10 +405,13 @@ fn analyze_transactions(txns: &[Transaction], multiplier: u64) -> (Vec<AnalysisR
 // ── Output Formatting ───────────────────────────────────────────
 
 fn shorten(s: &str, prefix: usize, suffix: usize) -> String {
-    if s.len() <= prefix + suffix + 2 {
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= prefix + suffix + 2 {
         return s.to_string();
     }
-    format!("{}..{}", &s[..prefix], &s[s.len() - suffix..])
+    let head: String = chars[..prefix].iter().collect();
+    let tail: String = chars[chars.len() - suffix..].iter().collect();
+    format!("{}..{}", head, tail)
 }
 
 fn print_table(results: &[AnalysisResult], summary: &Summary, multiplier: u64) {
@@ -588,15 +599,11 @@ fn run_live(config: &Config) -> ! {
         let start = match last_version {
             Some(v) => v + 1,
             None => {
-                // Get the latest transactions to find current version
-                match fetch_transactions_by_version(&config.base_url, 0, 1) {
-                    Ok(txns) => {
-                        if let Some(tx) = txns.first() {
-                            // Start from a recent version
-                            tx.version.parse::<u64>().unwrap_or(0)
-                        } else {
-                            0
-                        }
+                // Query the ledger info endpoint to get the current chain head
+                match fetch_latest_version(&config.base_url) {
+                    Ok(v) => {
+                        eprintln!("Starting from ledger version {}...", v);
+                        v
                     }
                     Err(e) => {
                         eprintln!("Error fetching latest version: {}", e);
