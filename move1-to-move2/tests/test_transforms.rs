@@ -811,6 +811,28 @@ fn test_while_to_for_no_match_wrong_increment() {
 }
 
 #[test]
+fn test_while_to_for_expression_bound() {
+    // Compound expression in bound should get parenthesized
+    let input = r#"module 0x1::test {
+    fun f() {
+        let i = 0;
+        while (i < x + 1) {
+            do_thing(i);
+            i = i + 1;
+        };
+    }
+}"#;
+    let expected = r#"module 0x1::test {
+    fun f() {
+        for (i in 0..(x + 1)) {
+            do_thing(i);
+        };
+    }
+}"#;
+    assert_eq!(transform(input), expected);
+}
+
+#[test]
 fn test_while_to_for_no_match_no_preceding_let() {
     // No let binding before while — should not convert to for loop
     // But compound_assign still converts i = i + 1 → i += 1

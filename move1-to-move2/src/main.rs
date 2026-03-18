@@ -401,6 +401,15 @@ fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
     })
 }
 
+/// Wrap text in parentheses if the node is a compound expression (not a simple leaf).
+fn maybe_paren(node: tree_sitter::Node, text: &str) -> String {
+    match node.kind() {
+        "identifier" | "num_literal" | "address_literal" | "bool_literal"
+        | "name_expression" => text.to_string(),
+        _ => format!("({text})"),
+    }
+}
+
 /// Check if an identifier appears anywhere in a subtree.
 fn contains_identifier(node: tree_sitter::Node, source: &[u8], name: &str) -> bool {
     if node.kind() == "identifier" && node.utf8_text(source).ok() == Some(name) {
@@ -586,7 +595,11 @@ fn try_while_to_for_edits(node: tree_sitter::Node, source: &[u8]) -> Option<Vec<
     result.push(Edit {
         start_byte: while_kw_start,
         end_byte: body_start,
-        replacement: format!("for ({var_name} in {start_text}..{bound_text}) "),
+        replacement: format!(
+            "for ({var_name} in {}..{}) ",
+            maybe_paren(start_value, start_text),
+            maybe_paren(cond_rhs, bound_text),
+        ),
         rule: "while_to_for",
     });
 
