@@ -13,6 +13,8 @@ Most tools parse Move source using the `tree-sitter-move-on-aptos` grammar — n
 | [**move-bounds-checker**](move-bounds-checker/) | Static checker that catches Aptos VM limit violations before deployment (tree-sitter) |
 | [**move-bounds-checker-native**](move-bounds-checker-native/) | Same bounds checking using the native Move compiler parser for higher accuracy |
 | [**move1-to-move2**](move1-to-move2/) | Automated transformer that migrates Move 1 code to Move 2 syntax |
+| [**named-address-recover**](named-address-recover/) | Recovers named address mappings by cross-referencing Move.toml, source, and bytecode |
+| [**aptos-gas-analyzer**](aptos-gas-analyzer/) | Analyzes transaction gas costs under a multiplier to find transactions that would fail |
 
 ## Requirements
 
