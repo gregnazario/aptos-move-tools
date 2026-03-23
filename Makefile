@@ -1,4 +1,4 @@
-TOOLS := tools-base move-suggest move-bounds-checker move1-to-move2 aptos-gas-analyzer
+TOOLS := tools-base move-suggest move-bounds-checker move1-to-move2 aptos-gas-analyzer move-arg-names
 # Tools that additionally require a local aptos-core checkout
 APTOS_TOOLS := move-bounds-checker-native named-address-recover
 ALL_TOOLS := $(TOOLS) $(APTOS_TOOLS)
