@@ -3,32 +3,67 @@ updates:
   - package-ecosystem: cargo
     directory: "/aptos-gas-analyzer"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/move-arg-names"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/move-bounds-checker"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/move-bounds-checker-native"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/move-suggest"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/move1-to-move2"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/named-address-recover"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
   - package-ecosystem: cargo
     directory: "/tools-base"
     schedule: { interval: weekly }
-    groups: { dependencies: { patterns: ["*"] } }
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+      major:
+        update-types: ["major"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly }
