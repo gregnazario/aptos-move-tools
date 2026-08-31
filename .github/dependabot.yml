@@ -2,46 +2,163 @@ version: 2
 updates:
   - package-ecosystem: cargo
     directory: "/aptos-gas-analyzer"
-    schedule: &weekly { interval: weekly }
-    groups: &update-groups
+    schedule:
+      interval: weekly
+    groups:
       minor-and-patch:
         applies-to: version-updates
-        update-types: ["minor", "patch"]
+        update-types:
+          - "minor"
+          - "patch"
       major:
         applies-to: version-updates
-        update-types: ["major"]
+        update-types:
+          - "major"
       security-updates:
         applies-to: security-updates
-        patterns: ["*"]
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/move-arg-names"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/move-bounds-checker"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/move-bounds-checker-native"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/move-suggest"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/move1-to-move2"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/named-address-recover"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: cargo
     directory: "/tools-base"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: "/"
-    schedule: *weekly
-    groups: *update-groups
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
