@@ -404,8 +404,9 @@ fn try_cast_paren_edit(node: tree_sitter::Node, source: &[u8]) -> Option<Edit> {
 /// Wrap text in parentheses if the node is a compound expression (not a simple leaf).
 fn maybe_paren(node: tree_sitter::Node, text: &str) -> String {
     match node.kind() {
-        "identifier" | "num_literal" | "address_literal" | "bool_literal"
-        | "name_expression" => text.to_string(),
+        "identifier" | "num_literal" | "address_literal" | "bool_literal" | "name_expression" => {
+            text.to_string()
+        }
         _ => format!("({text})"),
     }
 }
