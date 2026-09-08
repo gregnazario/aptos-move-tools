@@ -434,7 +434,7 @@ fn try_while_to_for_edits(node: tree_sitter::Node, source: &[u8]) -> Option<Vec<
     // Find the condition (binary_expression) and body (block) by scanning children
     let mut condition = None;
     let mut body = None;
-    let count = node.child_count() as u32;
+    let count = node.child_count();
     for i in 0..count {
         let child = node.child(i).unwrap();
         if child.kind() == "binary_expression" && condition.is_none() {
@@ -789,7 +789,7 @@ fn collect_edits(node: tree_sitter::Node, source: &[u8], edits: &mut Vec<Edit>) 
     // These are anonymous tokens in function/struct declarations.
     // We scan children for the pattern: "public" "(" "friend"/"package" ")"
     if node.kind() == "function_declaration" || node.kind() == "struct_declaration" {
-        let count = node.child_count() as u32;
+        let count = node.child_count();
         for i in 0..count.saturating_sub(3) {
             let c0 = node.child(i).unwrap();
             let c1 = node.child(i + 1).unwrap();
