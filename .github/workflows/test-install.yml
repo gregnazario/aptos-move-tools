@@ -116,14 +116,9 @@ jobs:
         shell: pwsh
         run: |
           $installDir = Join-Path $env:RUNNER_TEMP "aptos-bad"
-          $failed = $false
-          try {
-              .\install.ps1 -Version v999.0.0 -InstallDir $installDir
-          } catch {
-              $failed = $true
-          }
-          # Also check exit code from non-terminating errors
-          if (-not $failed -and (Test-Path (Join-Path $installDir "move-suggest.exe"))) {
-              throw "Expected failure but got success"
-          }
+          # Run in a child process: install.ps1 calls "exit 1" on failure,
+          # which would otherwise abort this session.
+          pwsh -NoProfile -File .\install.ps1 -Version v999.0.0 -InstallDir $installDir
+          if ($LASTEXITCODE -eq 0) { throw "Expected failure but got success" }
           Write-Host "Correctly failed on bad version"
+          exit 0
