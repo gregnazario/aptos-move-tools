@@ -195,7 +195,7 @@ fn scan_block_for_multi_push(
     suggestions: &mut Vec<Suggestion>,
     consumed: &mut Vec<(usize, usize)>,
 ) {
-    let child_count = block.child_count();
+    let child_count = block.child_count() as usize;
     let mut i: usize = 0;
 
     while i < child_count {
