@@ -23,8 +23,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
 
+    env:
+      # Lets install.sh authenticate to the GitHub API (rate limits)
+      GITHUB_TOKEN: ${{ github.token }}
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Test install (latest, auto-detect)
         run: |
@@ -33,8 +37,8 @@ jobs:
           test -x "$RUNNER_TEMP/aptos-bin/move-suggest"
           test -x "$RUNNER_TEMP/aptos-bin/move-bounds-checker"
           test -x "$RUNNER_TEMP/aptos-bin/move1-to-move2"
-          # Verify binaries actually run
-          "$RUNNER_TEMP/aptos-bin/move-suggest" --help
+          # Verify the binary runs (move-suggest has no --help; it prints usage)
+          "$RUNNER_TEMP/aptos-bin/move-suggest" 2>&1 | grep -q "Usage"
 
       - name: Test install (specific version)
         run: |
@@ -75,8 +79,12 @@ jobs:
     name: install.ps1 / windows
     runs-on: windows-latest
 
+    env:
+      # Lets install.ps1 authenticate to the GitHub API (rate limits)
+      GITHUB_TOKEN: ${{ github.token }}
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Test install (latest, auto-detect)
         shell: pwsh
@@ -87,8 +95,15 @@ jobs:
           if (-not (Test-Path (Join-Path $installDir "move-suggest.exe"))) { throw "move-suggest.exe not found" }
           if (-not (Test-Path (Join-Path $installDir "move-bounds-checker.exe"))) { throw "move-bounds-checker.exe not found" }
           if (-not (Test-Path (Join-Path $installDir "move1-to-move2.exe"))) { throw "move1-to-move2.exe not found" }
-          # Verify binary actually runs
-          & (Join-Path $installDir "move-suggest.exe") --help
+          # Verify the binary runs (move-suggest has no --help; it prints
+          # usage to stderr and exits 2). Start-Process + file redirection
+          # avoids pwsh NativeCommandError on stderr with EAP=stop.
+          $exe = Join-Path $installDir "move-suggest.exe"
+          $errFile = Join-Path $env:RUNNER_TEMP "move-suggest-usage.txt"
+          $p = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardError $errFile
+          $usage = Get-Content $errFile -Raw
+          Write-Host $usage
+          if ($p.ExitCode -ne 2 -or $usage -notmatch "Usage") { throw "move-suggest.exe did not print usage (exit $($p.ExitCode))" }
 
       - name: Test install (specific version)
         shell: pwsh
@@ -101,14 +116,9 @@ jobs:
         shell: pwsh
         run: |
           $installDir = Join-Path $env:RUNNER_TEMP "aptos-bad"
-          $failed = $false
-          try {
-              .\install.ps1 -Version v999.0.0 -InstallDir $installDir
-          } catch {
-              $failed = $true
-          }
-          # Also check exit code from non-terminating errors
-          if (-not $failed -and (Test-Path (Join-Path $installDir "move-suggest.exe"))) {
-              throw "Expected failure but got success"
-          }
+          # Run in a child process: install.ps1 calls "exit 1" on failure,
+          # which would otherwise abort this session.
+          pwsh -NoProfile -File .\install.ps1 -Version v999.0.0 -InstallDir $installDir
+          if ($LASTEXITCODE -eq 0) { throw "Expected failure but got success" }
           Write-Host "Correctly failed on bad version"
+          exit 0
