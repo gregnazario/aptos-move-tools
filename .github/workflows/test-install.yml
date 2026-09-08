@@ -95,9 +95,15 @@ jobs:
           if (-not (Test-Path (Join-Path $installDir "move-suggest.exe"))) { throw "move-suggest.exe not found" }
           if (-not (Test-Path (Join-Path $installDir "move-bounds-checker.exe"))) { throw "move-bounds-checker.exe not found" }
           if (-not (Test-Path (Join-Path $installDir "move1-to-move2.exe"))) { throw "move1-to-move2.exe not found" }
-          # Verify the binary runs (move-suggest has no --help; it prints usage)
-          $usage = & (Join-Path $installDir "move-suggest.exe") 2>&1 | Out-String
-          if ($usage -notmatch "Usage") { throw "move-suggest.exe did not print usage" }
+          # Verify the binary runs (move-suggest has no --help; it prints
+          # usage to stderr and exits 2). Start-Process + file redirection
+          # avoids pwsh NativeCommandError on stderr with EAP=stop.
+          $exe = Join-Path $installDir "move-suggest.exe"
+          $errFile = Join-Path $env:RUNNER_TEMP "move-suggest-usage.txt"
+          $p = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardError $errFile
+          $usage = Get-Content $errFile -Raw
+          Write-Host $usage
+          if ($p.ExitCode -ne 2 -or $usage -notmatch "Usage") { throw "move-suggest.exe did not print usage (exit $($p.ExitCode))" }
 
       - name: Test install (specific version)
         shell: pwsh
