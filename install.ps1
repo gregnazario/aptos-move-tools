@@ -42,8 +42,13 @@ function Resolve-Version {
     if ($script:Version) { return }
 
     Say "fetching latest release version..."
+    $headers = @{ "User-Agent" = "aptos-move-tools-installer" }
+    if ($env:GITHUB_TOKEN) {
+        # Authenticate to avoid unauthenticated API rate limits (e.g. in CI)
+        $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)"
+    }
     try {
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ "User-Agent" = "aptos-move-tools-installer" }
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers $headers -MaximumRetryCount 3 -RetryIntervalSec 2
         $script:Version = $release.tag_name
     } catch {
         Err "could not determine latest release version: $_"

@@ -23,6 +23,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
 
+    env:
+      # Lets install.sh authenticate to the GitHub API (rate limits)
+      GITHUB_TOKEN: ${{ github.token }}
+
     steps:
       - uses: actions/checkout@v7
 
@@ -33,8 +37,8 @@ jobs:
           test -x "$RUNNER_TEMP/aptos-bin/move-suggest"
           test -x "$RUNNER_TEMP/aptos-bin/move-bounds-checker"
           test -x "$RUNNER_TEMP/aptos-bin/move1-to-move2"
-          # Verify binaries actually run
-          "$RUNNER_TEMP/aptos-bin/move-suggest" --help
+          # Verify the binary runs (move-suggest has no --help; it prints usage)
+          "$RUNNER_TEMP/aptos-bin/move-suggest" 2>&1 | grep -q "Usage"
 
       - name: Test install (specific version)
         run: |
@@ -75,6 +79,10 @@ jobs:
     name: install.ps1 / windows
     runs-on: windows-latest
 
+    env:
+      # Lets install.ps1 authenticate to the GitHub API (rate limits)
+      GITHUB_TOKEN: ${{ github.token }}
+
     steps:
       - uses: actions/checkout@v7
 
@@ -87,8 +95,9 @@ jobs:
           if (-not (Test-Path (Join-Path $installDir "move-suggest.exe"))) { throw "move-suggest.exe not found" }
           if (-not (Test-Path (Join-Path $installDir "move-bounds-checker.exe"))) { throw "move-bounds-checker.exe not found" }
           if (-not (Test-Path (Join-Path $installDir "move1-to-move2.exe"))) { throw "move1-to-move2.exe not found" }
-          # Verify binary actually runs
-          & (Join-Path $installDir "move-suggest.exe") --help
+          # Verify the binary runs (move-suggest has no --help; it prints usage)
+          $usage = & (Join-Path $installDir "move-suggest.exe") 2>&1 | Out-String
+          if ($usage -notmatch "Usage") { throw "move-suggest.exe did not print usage" }
 
       - name: Test install (specific version)
         shell: pwsh
