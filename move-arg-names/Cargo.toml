@@ -6,4 +6,4 @@ rust-version = "1.93"
 
 [dependencies]
 tools-base = { path = "../tools-base" }
-tree-sitter = "0.26"
+tree-sitter = "0.27"
