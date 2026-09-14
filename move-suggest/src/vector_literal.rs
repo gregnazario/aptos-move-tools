@@ -198,7 +198,7 @@ fn scan_block_for_multi_push(
     let child_count = block.child_count();
     let mut i: usize = 0;
 
-    while i < child_count {
+    while i < child_count as usize {
         let child = match block.child(i as u32) {
             Some(c) => c,
             None => {
@@ -216,7 +216,7 @@ fn scan_block_for_multi_push(
 
             // Skip past the let's trailing semicolon
             let mut j = i + 1;
-            if j < child_count
+            if j < child_count as usize
                 && let Some(semi) = block.child(j as u32)
                 && semi.kind() == ";"
             {
@@ -225,7 +225,7 @@ fn scan_block_for_multi_push(
             }
 
             // Scan for consecutive push_back calls
-            while j < child_count {
+            while j < child_count as usize {
                 let stmt = match block.child(j as u32) {
                     Some(s) => s,
                     None => break,
@@ -235,7 +235,7 @@ fn scan_block_for_multi_push(
                 {
                     elements.push(elem);
                     // Look for trailing semicolon
-                    if j + 1 < child_count
+                    if j + 1 < child_count as usize
                         && let Some(semi) = block.child((j + 1) as u32)
                         && semi.kind() == ";"
                     {
