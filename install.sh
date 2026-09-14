@@ -112,9 +112,14 @@ download() {
     url="$1"
     output="$2"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL -o "$output" "$url"
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            # Authenticate to avoid unauthenticated API rate limits (e.g. in CI)
+            curl -fsSL --retry 3 --retry-delay 2 -H "Authorization: Bearer $GITHUB_TOKEN" -o "$output" "$url"
+        else
+            curl -fsSL --retry 3 --retry-delay 2 -o "$output" "$url"
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -q -O "$output" "$url"
+        wget -q --tries=3 --waitretry=2 -O "$output" "$url"
     else
         err "need curl or wget to download files"
     fi
@@ -123,9 +128,13 @@ download() {
 download_to_stdout() {
     url="$1"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url"
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            curl -fsSL --retry 3 --retry-delay 2 -H "Authorization: Bearer $GITHUB_TOKEN" "$url"
+        else
+            curl -fsSL --retry 3 --retry-delay 2 "$url"
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -q -O- "$url"
+        wget -q --tries=3 --waitretry=2 -O- "$url"
     else
         err "need curl or wget to download files"
     fi
